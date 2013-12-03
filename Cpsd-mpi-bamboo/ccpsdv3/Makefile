@@ -1,4 +1,4 @@
-BINDIR = ../Release
+BINDIR = ../bin
 SRCDIR = .
 OBJECTS = main.o cpsd.o dirac_exchange.o vosko.o message.o get_cube.o get_g.o get_masker.o strfac.o gcdotc.o gsdot.o gssum.o eigsrt.o second.o
 

@@ -1,7 +1,7 @@
 #!/bin/csh -f
 
  echo ....Using single precision code....
- set SRCDIR = ~bylaska/Codes/Cpsd/ckbppv3
+ set SRCDIR = ../ckbppv3
  set SRC1 = $SRCDIR/kbppv3.c
 
 set PSPDIR = ~bylaska/Codes/Cpsd/PSP
