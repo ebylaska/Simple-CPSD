@@ -35,12 +35,10 @@ FFLAGS = -c -O3
 .f.o:
 	gfortran ${FFLAGS}  $<
 
-libdmfft.a: ${OBJECTS}
+all: ${OBJECTS}
 	ar rc libfftpack.a  ${OBJECTS}
 	mv libfftpack.a  ${LIBDIR}
 
 clean:
-	rm -f *.o *.a *.trace core
-
-
+	rm -f *.o *.a *.trace core ${LIBDIR}/libfftpack.a
 
