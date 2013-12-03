@@ -1,0 +1,17 @@
+#!/bin/csh -f
+
+echo ....Using single precision code....
+set SRCDIR = ~bylaska/Codes/Cpsd/ccpsdv3/
+
+
+# compile cpsdv3 code
+
+pushd .
+cd $SRCDIR
+make
+rm *.o
+popd
+mv $SRCDIR/ccpsdv3.x .
+
+
+exit

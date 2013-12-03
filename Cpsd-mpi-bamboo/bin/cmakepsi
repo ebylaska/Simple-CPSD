@@ -1,0 +1,21 @@
+#!/bin/csh -f
+
+   echo ....Using single precision code
+   set SRCDIR = ~bylaska/Codes/Cpsd/cmakepsi
+   set SRC = $SRCDIR/makepsi.c
+
+set LIB = -lblas
+
+cp $SRCDIR/PSI0.DAT .
+
+echo -n "    Enter output file name => "
+set name = $<
+
+echo "Compiling. Please wait ..."
+gcc -o makepsi.x -O $SRC $LIB
+
+echo "Start calculation ..."
+makepsi.x $name
+
+\rm makepsi.x
+exit
