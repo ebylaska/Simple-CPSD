@@ -1,0 +1,21 @@
+#! /bin/csh -f
+
+# scpsdv3 job:
+#
+
+set job = c2
+set old = 01
+set new = 02
+
+rm -f IONOUT ELCOUT MESSAGE
+cp cpsdv3.d.2 CONTROL
+cp $job.ion$old IONIN
+cp $job.elc$old ELCIN
+
+../bin/scpsdv3.x >& MESSAGE
+
+cp  MESSAGE $job.msg$new
+cp  IONOUT  $job.ion$new
+cp  ELCOUT  $job.elc$new
+
+exit
