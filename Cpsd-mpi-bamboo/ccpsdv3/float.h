@@ -41,13 +41,13 @@
 #define FMTE20p10   "%20.10le"
 #define FMT10   "%10.3lf %10.3lf %10.3lf"
 #define REAL    double
-#define edot    ddot
-#define escal   dscal
-#define ecopy   dcopy
-#define eaxpy   daxpy
-#define esyev   dsyev
-#define egemm   dgemm
-#define ieamax	idamax
+#define edot    ddot_
+#define escal   dscal_
+#define ecopy   dcopy_
+#define eaxpy   daxpy_
+#define esyev   dsyev_
+#define egemm   dgemm_
+#define ieamax	idamax_
 
 
 /* define BLAS routines */

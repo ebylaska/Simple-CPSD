@@ -20,9 +20,9 @@
 #define FMT1	"%lf"
 #define FMT10	"%10.3lf %10.3lf %10.3lf"
 #define REAL	double
-#define edot	ddot
-#define escal	dscal
-#define ecopy	dcopy
+#define edot	ddot_
+#define escal	dscal_
+#define ecopy	dcopy_
 
 
 
