@@ -658,6 +658,17 @@ void cpsd(const int inner,
    *deltac /= dte;
 
    *deltar = 0.0;
+   if (move)
+   {
+      for (ii=0; ii<nion; ++ii)
+      {
+         adiff = sqrt( fion[3*ii]*fion[3*ii]
+               + fion[3*ii+1]*fion[3*ii+1]
+               + fion[3*ii+2]*fion[3*ii+2] );
+         if (adiff> (*deltar)) *deltar = adiff;
+      }
+   }
+
 
    /* deallocate memory */
 /*
