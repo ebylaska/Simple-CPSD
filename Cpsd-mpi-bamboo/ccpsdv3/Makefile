@@ -11,17 +11,16 @@ CFLAGS =  $(OPTIONS)
 CC = gcc
 
 
-all: single
+all: single cleanobjects double
 
 single: setsingle ${OBJECTS}
-	gcc -o ccpsdv3.x ${CFLAGS} ${OBJECTS} ${LIBRARYs}
-	mv ccpsdv3.x ${BINDIR}
+	gcc -o scpsdv3.x ${CFLAGS} ${OBJECTS} ${LIBRARYs}
+	mv scpsdv3.x ${BINDIR}
 
 double: setdouble ${OBJECTS}
-	gcc -o ccpsdv3.x ${CFLAGS} ${OBJECTS} ${LIBRARYd}
+	gcc -o dcpsdv3.x ${CFLAGS} ${OBJECTS} ${LIBRARYd}
+	mv dcpsdv3.x ${BINDIR}
 
-cpsd.x: ${OBJECTS}
-	gcc -o ccpsdv3.x ${CFLAGS} ${OBJECTS} ${LIBRARY}
 
 setsingle:
 	cp float_single.h float.h
@@ -29,5 +28,8 @@ setsingle:
 setdouble:
 	cp float_double.h float.h
 
+cleanobjects:
+	rm -f ${OBJECTS} 
+
 clean:
-	rm -f core ${OBJECTS} ${BINDIR}/ccpsdv3.x
+	rm -f core ${OBJECTS} ${BINDIR}/scpsdv3.x ${BINDIR}/dcpsdv3.x

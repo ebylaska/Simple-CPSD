@@ -1,5 +1,5 @@
 BINDIR = ../bin
-SRCDIR = .
+
 OBJECTS = makepsi.o
 DOBJECTS = dmakepsi.o
 
@@ -11,15 +11,16 @@ CFLAGS =  $(OPTIONS)
 CC = gcc
 
 
-all: single
+all: single double
 
 single: ${OBJECTS}
-	gcc -o cmakepsi.x ${CFLAGS} ${OBJECTS} ${LIBRARY}
-	mv cmakepsi.x ${BINDIR}
+	gcc -o smakepsi.x ${CFLAGS} ${OBJECTS} ${LIBRARY}
+	mv smakepsi.x ${BINDIR}
 
-double:  ${OBJECTS}
-	gcc -o cmakepsi.x ${CFLAGS} ${DOBJECTS} ${LIBRARY}
+double:  ${DOBJECTS}
+	gcc -o dmakepsi.x ${CFLAGS} ${DOBJECTS} ${LIBRARY}
+	mv dmakepsi.x ${BINDIR}
 
 
 clean:
-	rm -f core ${OBJECTS} ${BINDIR}/cmakepsi.x
+	rm -f core ${OBJECTS} ${DOBJECTS} ${BINDIR}/smakepsi.x ${BINDIR}/dmakepsi.x

@@ -2,6 +2,7 @@
 #define _FLOAT_H_
 
 /* single precision floats */
+/*
 #define REALTYPE  "single precision"
 #define FMT1    "%f"
 #define FMT8p3    "%8.3f"
@@ -20,13 +21,12 @@
 #define escal   sscal
 #define ecopy   scopy
 #define eaxpy   saxpy
-#define esyev	ssyev
-#define egemm	sgemm
-#define ieamax  isamax
-
+#define esyev   ssyev
+#define egemm   sgemm
+#define ieamax	isamax
+*/
 
 /* double precision floats */
-/*
 #define REALTYPE  "double precision"
 #define FMT1    "%lf"
 #define FMT8p3    "%8.3lf"
@@ -45,11 +45,9 @@
 #define escal   dscal
 #define ecopy   dcopy
 #define eaxpy   daxpy
-#define esyev	dsyev
-#define egemm	dgemm
-#define ieamax  idamax
-*/
-
+#define esyev   dsyev
+#define egemm   dgemm
+#define ieamax	idamax
 
 
 /* define BLAS routines */
