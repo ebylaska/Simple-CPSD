@@ -1,17 +1,17 @@
 BINDIR = ../bin
-SRCDIR = .
+
 OBJECTS = main.o cpsd.o dirac_exchange.o vosko.o message.o get_cube.o get_g.o get_masker.o strfac.o gcdotc.o gsdot.o gssum.o eigsrt.o second.o
 
 LIBDIR = ../lib
-LIBRARYd = -lfftpack3d -lfftpack -llapack -lblas
 LIBRARYs = -lfftpack3ds -lfftpack -llapack -lblas
+LIBRARYd = -lfftpack3d -lfftpack -llapack -lblas
 
 OPTIONS = -O3  -L$(LIBDIR)
 CFLAGS =  $(OPTIONS) 
 CC = gcc
 
 
-all: single cleanobjects double
+all: single
 
 single: setsingle ${OBJECTS}
 	gcc -o scpsdv3.x ${CFLAGS} ${OBJECTS} ${LIBRARYs}

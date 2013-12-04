@@ -1,0 +1,14 @@
+#!/bin/csh -f
+
+   echo ....Using single precision code
+   set SRCDIR = ../cmakepsi
+
+
+cp $SRCDIR/PSI0.DAT .
+
+set name = $1
+
+echo "Start calculation ..."
+../bin/smakepsi.x $name
+
+exit

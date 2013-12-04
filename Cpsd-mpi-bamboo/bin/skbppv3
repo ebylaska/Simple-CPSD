@@ -1,0 +1,11 @@
+#!/bin/csh -f
+
+ echo ....Using single precision code....
+
+set PSPDIR = ../PSP
+
+
+set source = $1
+../bin/skbppv3.x $PSPDIR/$source.dat
+mv DATAOUT $source.vpp
+exit
