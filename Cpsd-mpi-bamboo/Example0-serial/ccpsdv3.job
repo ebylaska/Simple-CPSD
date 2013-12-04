@@ -12,7 +12,7 @@ cp ccpsdv3.d CONTROL
 cp $job.ion$old IONIN
 cp $job.elc$old ELCIN
 
-ccpsdv3.x >& MESSAGE
+../bin/ccpsdv3.x >& MESSAGE
 
 cp  MESSAGE $job.msg$new
 cp  IONOUT  $job.ion$new

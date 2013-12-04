@@ -1,20 +1,11 @@
 #!/bin/csh -f
 
  echo ....Using single precision code....
- set SRCDIR = ../ckbppv3
- set SRC1 = $SRCDIR/kbppv3.c
 
-set PSPDIR = ~bylaska/Codes/Cpsd/PSP
-set LIBS = -lblas
+set PSPDIR = ../PSP
 
 
-gcc -O3 $SRC1 -o kbppv3.exe $LIBS
-echo
-echo -n "enter a potential data filename: "
-set source = $<
-echo 
-cp $PSPDIR/$source.dat .
-kbppv3.exe $source.dat
+set source = $1
+../bin/ckbppv3.x $PSPDIR/$source.dat
 mv DATAOUT $source.vpp
-rm  kbppv3.exe $source.dat
 exit
