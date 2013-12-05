@@ -294,7 +294,7 @@ void cpsd(const int inner,
                   kk = 0;
                   for (k=0; k<nfft3d; ++k)
                   {
-                     xce[k] = rex1[kk]*vtmp[kk] + rex1[kk+1]*vtmp[kk+1];
+                     xce[k] = rex1[kk+1]*vtmp[kk] - rex1[kk]*vtmp[kk+1];
                      kk += 2;
                   }
                   if (ispin==1) sw1 *= 2;
@@ -328,12 +328,13 @@ void cpsd(const int inner,
            fion[3*ii+1] += gsdot(nfft,&G[nfft3d],vtmp)  *zv[ia]*scal2;
            fion[3*ii+2] += gsdot(nfft,&G[2*nfft3d],vtmp)*zv[ia]*scal2;
 
+
            /* realspace ewald */
            for (jj=ii+1; jj<nion; ++jj)
            {
               dx=r1[3*ii]   - r1[3*jj];
-              dy=r1[1+3*ii] - r1[1+3*jj];
-              dz=r1[2+3*ii] - r1[2+3*jj];
+              dy=r1[3*ii+1] - r1[3*jj+1];
+              dz=r1[3*ii+2] - r1[3*jj+2];
               zz=zv[katm[ii]]*zv[katm[jj]];
               sw1=0.0; sw2=0.0; sw3=0.0;
               for (l=0; l<nsh; ++l)
@@ -344,7 +345,8 @@ void cpsd(const int inner,
                  r=sqrt(x*x+y*y+z*z);
                  w=r/rcut;
                  aa    = (1.0+w*(B1+w*(B2+w*(B3+w*(B4+w*(B5+w*B6))))));
-                 erfc  = 1.0/(aa*aa*aa*aa * aa*aa*aa*aa);
+                 aa *= aa*aa*aa;
+                 erfc  = 1.0/(aa*aa*aa*aa);
                  adiff = zz*(erfc+CERFC*w*exp(-w*w))/(r*r*r);
                  sw1 += x*adiff;
                  sw2 += y*adiff;
@@ -401,9 +403,9 @@ void cpsd(const int inner,
          kk = 0;
          for (ii=0; ii<nion; ++ii)
          {
-            r2[kk]   = r1[kk]   + dti[i]*fion[kk];
-            r2[kk+1] = r1[kk+1] + dti[i]*fion[kk+1];
-            r2[kk+2] = r1[kk+2] + dti[i]*fion[kk+2];
+            r2[kk]   = r1[kk]   + dti[ii]*fion[kk];
+            r2[kk+1] = r1[kk+1] + dti[ii]*fion[kk+1];
+            r2[kk+2] = r1[kk+2] + dti[ii]*fion[kk+2];
             kk += 3;
          }
       }
@@ -658,6 +660,16 @@ void cpsd(const int inner,
    *deltac /= dte;
 
    *deltar = 0.0;
+   if (move)
+   { 
+      for (ii=0; ii<nion; ++ii)
+      {
+         adiff = sqrt( fion[3*ii]*fion[3*ii] 
+                     + fion[3*ii+1]*fion[3*ii+1] 
+                     + fion[3*ii+2]*fion[3*ii+2]);
+         if (adiff>(*deltar)) *deltar = adiff;
+      }
+   }
 
    /* deallocate memory */
 /*
