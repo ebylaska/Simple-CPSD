@@ -161,6 +161,7 @@ static void mapping_init()
 	}
 }
 
+
 /*****************************************
  *                                       *
  *        d3db_c_transpose_jk_init       *
