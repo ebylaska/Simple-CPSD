@@ -32,10 +32,15 @@ static double *tmpx,*tmpy,*tmpz;
 
 
 
-
-static void generate_map_indexes(int taskid, int np, int ny, int nz, int p_map[], int q_map[], *nq_out)
+/******************************************
+ *                                        *
+ *          generate_map_indexes          *
+ *                                        *
+ ******************************************/
+static void generate_map_indexes(int taskid, int np, int ny, int nz,
+		                         int p_map[], int q_map[], *nq_out)
 {
-	int i,nq1,
+	int i,j,k,p,q,nq,nq1,nq2,rmdr1;
 	int *indx_proc,*indx_q,*tmp_p;
 
 	indx_proc = (int *) malloc(ny*nz*sizeof(int));
@@ -79,8 +84,15 @@ static void generate_map_indexes(int taskid, int np, int ny, int nz, int p_map[]
 	free(tmp_p);
 	free(indx_q);
 	free(indx_proc);
+
+	*nq_out = nq;
 }
 
+/*******************************************
+ *                                         *
+ *              mapping_init               *
+ *                                         *
+ *******************************************/
 static void mapping_init()
 {
 	int np     = Parallel_np();
@@ -149,10 +161,371 @@ static void mapping_init()
 	}
 }
 
+/*****************************************
+ *                                       *
+ *        d3db_c_transpose_jk_init       *
+ *                                       *
+ *****************************************/
 static void d3db_c_transpose_jk_init()
+{
+	int index1,index2,it,proc_to,proc_from,qhere,phere,qto,pto,qfrom,pfrom,itmp,i,j,k;
 
+	int taskid = Parallel_taskid();
+	int np = Parallel_np();
+
+	iq_to_i1 = (int *) malloc((nx/2+1)*ny*nq,sizeof(int));
+	iq_to_i2 = (int *) malloc((nx/2+1)*ny*nz*sizeof(int));
+	i1_start = (int *) malloc((nz+1)*sizeof(int));
+	i2_start = (int *) malloc((nz+1)*sizeof(int));
+
+    index1 = 0;
+    index2 = 0;
+    for (it=0; it<np; ++it)
+    {
+       proc_to   = (taskid+it)%np;
+       proc_from = (taskid-it+np)%np;
+       i1_start[it] = index1;
+       i2_start[it] = index2;
+
+       for (k=0; k<nz; ++k)
+       for (j=0; j<ny; ++j)
+       {
+          /**** packing scheme ****/
+          d3db_ktoqp(k,&qhere,&phere);
+          d3db_ktoqp(j,&qto,&pto);
+          if ((phere==taskid) && (pto==proc_to))
+          {
+        	 for (i=0; i<(nx/2+1); ++i)
+        	 {
+                itmp = i + j*(nx/2+1) + qhere*(nx/2+1)*ny;
+                iq_to_i1[itmp] = index1;
+                ++index1;
+        	 }
+          }
+
+          /**** unpacking scheme ****/
+          d3db_ktoqp(j,&qhere,&phere);
+          d3db_ktoqp(k,&qfrom,&pfrom);
+          if ((phere==taskid) && (pfrom==proc_from))
+          {
+        	 for (i=0; i<(nx/2+1); ++i)
+        	 {
+                itmp = i + k*(nx/2+1) + qhere*(nx/2+1)*ny;
+                iq_to_i2[itmp] = index2;
+                ++index2;
+        	 }
+          }
+       }
+    }
+    i1_start[np] = index1;
+    i2_start[np] = index2;
+}
+
+
+/*****************************************
+ *                                       *
+ *       d3db_c_transpose_ijk_init       *
+ *                                       *
+ *****************************************/
 static void d3db_c_transpose_ijk_init()
+{
 
+	int itmp,index1,index2,it,proc_to,proc_from,pto,qto,phere,qhere,i,j,k;
+
+	int taskid = Parallel_taskid();
+	int np     = Parallel_np();
+
+   /*********************************************************
+    **** map1to2 mapping - done - transpose operation #1 ****
+    *********************************************************/
+   h_iq_to_i1[0] = (int *) malloc((nx/2+1)*nq1*sizeof(int));
+   h_iq_to_i2[0] = (int *) malloc(ny*nq2*sizeof(int));
+   h_i1_start[0] = (int *) malloc((np+1)*sizeof(int));
+   h_i2_start[0] = (int *) malloc((np+1)*sizeof(int));
+
+   index1 = 0;
+   index2 = 0;
+   for (it=0; it<np; ++it)
+   {
+      proc_to   = (taskid+it)%np;
+      proc_from = (taskid-it+np)%np;
+      h_i1_start[0][it] = index1;
+      h_i2_start[0][it] = index2;
+
+      for (k=0; k<nz; ++k)
+      for (j=0; j<ny; ++j)
+      for (i=0; i<(nx/2+1); ++i)
+      {
+         /**** packing scheme ****/
+         phere = p_map1[j+k*ny];
+         qhere = q_map1[j+k*ny];
+         pto   = p_map2[k+i*nz]
+         qto   = q_map2[k+i*nz]
+
+         if ((phere==taskid) && (pto==proc_to))
+         {
+            itmp = i + qhere*(nx/2+1);
+            h_iq_to_i1[0][itmp] = index1;
+            ++index1;
+         }
+
+         /**** unpacking scheme ****/
+         if ((pto==taskid) && (phere==proc_from))
+         {
+            itmp = j + qto*ny;
+            h_iq_to_i2[0][itmp-1] = index2;
+            ++index2;
+         }
+      }
+   }
+   h_i1_start[0][np] = index1;
+   h_i2_start[0][np] = index2;
+
+
+   /*********************************************************
+    **** map2to3 mapping - done - transpose operation #2 ****
+    *********************************************************/
+   h_iq_to_i1[1] = (int *) malloc(ny*nq2*sizeof(int));
+   h_iq_to_i2[1] = (int *) malloc(nz*nq3*sizeof(int));
+   h_i1_start[1] = (int *) malloc((np+1)*sizeof(int));
+   h_i2_start[1] = (int *) malloc((np+1)*sizeof(int));
+
+   index1 = 0;
+   index2 = 0;
+   for (it=0; it<np; ++it)
+   {
+      proc_to   = (taskid+it)%np;
+      proc_from = (taskid-it+np)%np;
+      h_i1_start[1][it] = index1;
+      h_i2_start[1][it] = index2;
+
+      for (k=0; k<nz; ++k)
+      for (j=0; j<ny; ++j)
+      for (i=0; i<(nx/2+1); ++i)
+      {
+         /**** packing scheme ****/
+         phere = p_map2[k+i*nz];
+         qhere = q_map2[k+i*nz];
+         pto   = p_map3[i+j*(nx/2+1)];
+         qto   = q_map3[i+j*(nx/2+1)];
+
+         if ((phere==taskid) && (pto==proc_to))
+         {
+            itmp = j + qhere*ny;
+            h_iq_to_i1[1][itmp] = index1;
+            ++index1;
+         }
+
+         /**** unpacking scheme ****/
+         if ((pto==taskid) && (phere==proc_from))
+         {
+            itmp = k + qto*nz;
+            h_iq_to_i2[1][itmp] = index2;
+            ++index2;
+         }
+      }
+   }
+   h_i1_start[1][np] = index1;
+   h_i2_start[1][np] = index2;
+
+
+   /*********************************************************
+    **** map3to2 mapping - done - transpose operation #3 ****
+    *********************************************************/
+   h_iq_to_i1[2] = (int *) malloc(nz*nq3*sizeof(int));
+   h_iq_to_i2[2] = (int *) malloc(ny*nq2*sizeof(int));
+   h_i1_start[2] = (int *) malloc((np+1)*sizeof(int));
+   h_i2_start[2] = (int *) malloc((np+1)*sizeof(int));
+
+   index1 = 0;
+   index2 = 0;
+   for (it=0; it<np; ++it)
+   {
+      proc_to   = (taskid+it)%np;
+      proc_from = (taskid-it+np)%np;
+      h_i1_start[2][it] = index1;
+      h_i2_start[2][it] = index2;
+
+      for (k=0; k<nz; ++k)
+      for (j=0; j<ny; ++j)
+      for (i=0; i<(nx/2+1); ++i)
+      {
+         /**** packing scheme ****/
+         phere = p_map3[i+j*(nx/2+1)];
+         qhere = q_map3[i+j*(nx/2+1)];
+         pto   = p_map2[k+i*nz];
+         qto   = q_map2[k+i*nz];
+
+         if ((phere==taskid) && (pto==proc_to))
+         {
+            itmp = k + qhere*nz;
+            h_iq_to_i1[2][itmp] = index1;
+            ++index1;
+         }
+
+         /**** unpacking scheme ****/
+         if ((pto==taskid) && (phere==proc_from))
+         {
+            itmp = j + qto*ny;
+            h_iq_to_i2[2][itmp] = index2;
+            ++index2;
+         }
+      }
+   }
+   h_i1_start[2][np] = index1;
+   h_i2_start[2][np] = index2;
+
+
+   /*********************************************************
+    **** map2to1 mapping - done - transpose operation #4 ****
+    *********************************************************/
+   h_iq_to_i1[3] = (int *) malloc(ny*nq2*sizeof(int));
+   h_iq_to_i2[3] = (int *) malloc((nx/2+1)*nq1*sizeof(int));
+   h_i1_start[3] = (int *) malloc((np+1)*sizeof(int));
+   h_i2_start[3] = (int *) malloc((np+1)*sizeof(int));
+
+   index1 = 0;
+   index2 = 0;
+   for (it=0; it<np; ++it)
+   {
+      proc_to   = (taskid+it)%np;
+      proc_from = (taskid-it+np)%np;
+      h_i1_start[3][it] = index1;
+      h_i2_start[3][it] = index2;
+
+      for (k=0; k<nz; ++k)
+      for (j=0; j<ny; ++j)
+      for (i=0; i<(nx/2+1); ++i)
+      {
+         /**** packing scheme ****/
+         phere = p_map2[k+i*nz];
+         qhere = q_map2[k+i*nz];
+         pto   = p_map1[j+k*ny];
+         qto   = q_map1[j+k*ny];
+
+         if ((phere==taskid) && (pto==proc_to))
+         {
+            itmp = j + qhere*ny;
+            h_iq_to_i1[3][itmp] = index1;
+            ++index1;
+         }
+
+         /**** unpacking scheme ****/
+         if ((pto==taskid) && (phere==proc_from))
+         {
+            itmp = i + qto*(nx/2+1);
+            h_iq_to_i2[3][itmp] = index2;
+            ++index2;
+         }
+      }
+   }
+   h_i1_start[3][np] = index1;
+   h_i2_start[3][np] = index2;
+
+
+   /***********************************************************
+    **** map1to3 mapping  - done - transpose operation # 5 ****
+    ***********************************************************/
+   h_iq_to_i1[4] = (int *) malloc((nx/2+1)*nq1*sizeof(int));
+   h_iq_to_i2[4] = (int *) malloc(nz*nq3*sizeof(int));
+   h_i1_start[4] = (int *) malloc((np+1)*sizeof(int));
+   h_i2_start[4] = (int *) malloc((np+1)*sizeof(int));
+
+   index1 = 0;
+   index2 = 0;
+   for (it=0; it<np; ++it)
+   {
+      proc_to   = (taskid+it)%np;
+      proc_from = (taskid-it+np)%np;
+      h_i1_start[4][it] = index1;
+      h_i2_start[4][it] = index2;
+
+      for (k=0; k<nz; ++k)
+      for (j=0; j<ny; ++j)
+      for (i=0; i<(nx/2+1); ++i)
+      {
+         /**** packing scheme ****/
+         phere = p_map1[j+k*ny];
+         qhere = q_map1[j+k*ny];
+         pto   = p_map3[i+j*(nx/2+1)];
+         qto   = q_map3[i+j*(nx/2+1)];
+
+         if ((phere==taskid) && (pto==proc_to))
+         {
+            itmp = i + qhere*(nx/2+1);
+            h_iq_to_i1[4][itmp] = index1;
+            ++index1;
+         }
+
+         /**** unpacking scheme ****/
+         if ((pto==taskid) && (phere==proc_from))
+         {
+            itmp = k + qto*nz;
+            h_iq_to_i2[4][itmp] = index2;
+            ++index2;
+         }
+      }
+   }
+   h_i1_start[4][np] = index1;
+   h_i2_start[4][np] = index2;
+
+
+   /*************************
+    **** map3to1 mapping ****
+    *************************/
+   h_iq_to_i1[5] = (int *) malloc(nz*nq3*sizeof(int));
+   h_iq_to_i2[5] = (int *) malloc((nx/2+1)*nq1*sizeof(int));
+   h_i1_start[5] = (int *) malloc((np+1)*sizeof(int));
+   h_i2_start[5] = (int *) malloc((np+1)*sizeof(int));
+
+   index1 = 0;
+   index2 = 0;
+   for (it=0; it<np; ++it)
+   {
+      proc_to   = (taskid+it)%np;
+      proc_from = (taskid-it+np)%np;
+      h_i1_start[5][it] = index1;
+      h_i2_start[5][it] = index2;
+
+      for (k=0; k<nz; ++k)
+      for (j=0; j<ny; ++j)
+      for (i=0; i<(nx/2+1); ++i)
+      {
+
+         /**** packing scheme ****/
+         phere = p_map3[i+j*(nx/2+1)];
+         qhere = q_map3[i+j*(nx/2+1)];
+         pto   = p_map1[j+k*ny]
+         qto   = q_map1[j+k*ny];
+
+
+         if ((phere==taskid) && (pto==proc_to))
+         {
+            itmp = k + qhere*nz;
+            h_iq_to_i1[5][itmp] = index1;
+            ++index1;
+         }
+
+         /**** unpacking scheme ****/
+         if ((pto==taskid) && (phere==proc_from))
+         {
+            itmp = i + qto*(nx/2+1);
+            h_iq_to_i2[5][itmp] = index2;
+            ++index2;
+         }
+      }
+   }
+   h_i1_start[5][np] = index1;
+   h_i2_start[5][np] = index2;
+
+}
+
+
+/*****************************************
+ *                                       *
+ *             d3db_fft_init             *
+ *                                       *
+ *****************************************/
 static void d3db_fft_init()
 {
 	tmpx = (double *) malloc(2*(2*nx+15)*sizeof(double));
@@ -162,12 +535,24 @@ static void d3db_fft_init()
 	dcffti(ny,tmpy);
 	dcffti(nz,tmpz);
 }
+
+/*****************************************
+ *                                       *
+ *              d3db_fft_end             *
+ *                                       *
+ *****************************************/
 static void d3db_fft_end()
 {
 	free(tmpx);
 	free(tmpy);
 	free(tmpz);
 }
+
+/*****************************************
+ *                                       *
+ *              d3db_end                 *
+ *                                       *
+ *****************************************/
 
 void d3dB_end()
 {
@@ -202,6 +587,11 @@ void d3dB_end()
 	}
 }
 
+/*****************************************
+ *                                       *
+ *               d3db_init               *
+ *                                       *
+ *****************************************/
 void d3db_init(int nx_in, int ny_in, int nz_in, map_in)
 {
 	int np     = Parallel_np();
