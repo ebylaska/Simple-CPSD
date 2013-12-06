@@ -3,8 +3,15 @@ BINDIR = ../bin
 OBJECTS = makepsi.o
 DOBJECTS = dmakepsi.o
 
+ifeq ($(HOSTTYPE),x86_64-linux)
+   BLASLIB = -L/home/bylaska/lib -lblas -lm -lgfortran
+else
+   BLASLIB = -lblas
+endif
+
+
 LIBDIR = ../lib
-LIBRARY = -lblas
+LIBRARY = ${BLASLIB}
 
 OPTIONS = -O3  -L$(LIBDIR)
 CFLAGS =  $(OPTIONS) 

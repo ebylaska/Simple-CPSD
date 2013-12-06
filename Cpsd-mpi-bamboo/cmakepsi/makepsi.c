@@ -8,9 +8,9 @@
 #define FMT1	"%f"
 #define FMT10	"%10.3f %10.3f %10.3f"
 #define REAL	float
-#define edot	sdot
-#define escal	sscal
-#define ecopy	scopy
+#define edot	sdot_
+#define escal	sscal_
+#define ecopy	scopy_
 
 
 /* double precision floats */

@@ -3,10 +3,16 @@ BINDIR = ../bin
 
 OBJECTS = kbppv3.o
 DOBJECTS = dkbppv3.o
+ifeq ($(HOSTTYPE),x86_64-linux)
+   BLASLIB = -L/home/bylaska/lib -lblas -lm -gfortran
+else
+   BLASLIB = -lblas
+endif
+
 
 LIBDIR = ../lib
-LIBRARYd = -lblas
-LIBRARYs = -lblas
+LIBRARYd = $(BLASLIB)
+LIBRARYs = $(BLASLIB)
 
 OPTIONS = -O3  -L$(LIBDIR)
 CFLAGS =  $(OPTIONS) 

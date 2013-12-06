@@ -1,5 +1,5 @@
 SUBDIRECTORIES = ../aimd_size ../fftpack ../fftpack3d ../sfftpack3d ../ckbppv3 ../cmakepsi ../ccpsdv3
-EXAMPLEDIRECTORIES = ../Example0-single-serial ../Example0-double-serial
+EXAMPLEDIRECTORIES = ../Example0-single-serial ../Example0-double-serial ../Example1-double-serial
 
 ALLDIRECTORIES = $(SUBDIRECTORIES) $(EXAMPLEDIRECTORIES)
 
