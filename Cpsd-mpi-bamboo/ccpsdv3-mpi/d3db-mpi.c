@@ -161,6 +161,214 @@ static void mapping_init()
 	}
 }
 
+
+
+/***********************************
+ *					               *
+ *	          d3db_qtok   		   *
+ *					               *
+ ***********************************/
+void d3db_qtok(int q, int *k)
+{
+   *k = k_map[q];
+}
+
+
+/***********************************
+ *					               *
+ *	          d3db_ktoqp  		   *
+ *					               *
+ ***********************************/
+void d3db_ktoqp(int k, int *q, int *p)
+{
+   *q = q_map[k];
+   *p = p_map[k];
+}
+
+/***********************************
+ *					               *
+ *	       d3db_ijktoindexp	       *
+ *					               *
+ ***********************************/
+void d3db_ijktoindexp(int i, int j, int k,
+		              int *indx, int *p)
+{
+   int q;
+
+   /**** slab mapping ***/
+   if (mapping==1)
+   {
+      q = q_map[k];
+      *p = p_map[k];
+      *indx = i + j*(nx/2+1) + q*(nx/2+1)*ny;
+   }
+
+   /**** Hilbert mapping ****/
+   else
+   {
+      q = q_map3[i+j*(nx/2+1)];
+      *p = p_map3[i+j*(nx/2+1)];
+      *indx = k + q*nz;
+   }
+}
+
+
+/***********************************
+ *                                 *
+ *           d3db_ijktoindex1p     *
+ *                                 *
+ ***********************************/
+void d3db_ijktoindex1p(int i, int j, int k,
+		               int *indx, int *p)
+{
+   int q;
+
+   /**** slab mapping ***/
+   if (mapping==1)
+   {
+      q  = q_map[j];
+      *p = p_map[j];
+      *indx = i + k*(nx/2+1) + q*(nx/2+1)*nz;
+   }
+   /**** hilbert mapping ****/
+   else
+   {
+      q = q_map2[k+i*nz];
+      *p = p_map2[k+i*nz];
+      *indx = j + q*ny;
+   }
+}
+
+
+
+
+/***********************************
+ *                                 *
+ *           D3dB_ijktoindex2p     *
+ *                                 *
+ ***********************************/
+void d3db_ijktoindex2p(int i,int j,int k,int *indx,int *p)
+{
+   int q;
+
+   /**** slab mapping ****/
+   if (mapping==1)
+   {
+      q = q_map[j];
+      *p = p_map[j];
+      *indx = i + k*(nx+2) + q*(nx+2)*ny;
+   }
+
+   /**** Hilbert mapping ****/
+   else
+   {
+      q = q_map1[j+k*ny];
+      *p = p_map1[j+k*ny];
+      *indx = i + q*(nx+2);
+   }
+}
+
+
+/***********************************
+ *					               *
+ *	        d3db_nfft3d		       *
+ *					               *
+ ***********************************/
+int d3db_nfft3d()
+{
+   return nfft3d;
+}
+
+
+/***********************************
+ *                                 *
+ *         d3db_nfft3d_map         *
+ *                                 *
+ ***********************************/
+int d3db_nfft3d_map()
+{
+   return nfft3d_map;
+}
+
+
+/***********************************
+ *					               *
+ *	        d3db_n2ft3d		       *
+ *					               *
+ ***********************************/
+int d3db_n2ft3d()
+{
+   return n2ft3d;
+}
+
+
+/***********************************
+ *                                 *
+ *         d3db_n2ft3d_map         *
+ *                                 *
+ ***********************************/
+int d3db_n2ft3d_map()
+{
+   return n2ft3d_map;
+}
+
+
+
+/***********************************
+ *					               *
+ *	        d3db_nq			       *
+ *				            	   *
+ ***********************************/
+int d3db_nq()
+{
+   return nq;
+}
+
+
+/***********************************
+ *					               *
+ *	        d3db_nx			       *
+ *					               *
+ ***********************************/
+int d3db_nx()
+{
+   return nx;
+}
+
+
+/***********************************
+ *					               *
+ *	        d3db_ny			       *
+ *					               *
+ ***********************************/
+
+int d3db_ny()
+{
+   return ny;
+}
+
+
+/***********************************
+ *					               *
+ *	        d3db_nz			       *
+ *					               *
+ ***********************************/
+int d3db_nz()
+{
+   return nz;
+}
+
+/************************************
+ *                                 *
+ *         d3db_zplane_size        *
+ *                                 *
+ ***********************************/
+int d3db_zplane_size()
+{
+   return zplane_size;
+}
+
+
 /*****************************************
  *                                       *
  *        d3db_c_transpose_jk_init       *
@@ -556,7 +764,8 @@ static void d3db_fft_end()
 
 void d3dB_end()
 {
-	D3dB_timereverse_end();
+	d3db_timereverse_end();
+	d3db_fft_end();
 
 	if (mapping==1)
 	{
