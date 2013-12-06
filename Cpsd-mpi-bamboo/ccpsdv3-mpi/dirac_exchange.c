@@ -13,7 +13,6 @@
 
 static	REAL	alpha=0.6666666666666666667;
 
-
 /* define constants */  
 #define onethird   0.33333333333333333333
 #define fourthird  1.33333333333333333333
