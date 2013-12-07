@@ -3,10 +3,48 @@
  *
  *  Created on: Dec 5, 2013
  *      Author: bylaska
- */
+ *
+ *
+, i i i i i t i i ; , ; ; ; , ; ; i i ; ; : i ; , ; : , , : , , , , , : : : , : : ; ; ; i ; i , , :
+; i i ; i ; i i , ; , ; , i , t i , f E ; , i ; ; . , , , , : : : : , , : : : : : : : : , , : , , .
+, ; ; : , ; : ; , , , i , , i i i ; j i j L f i , i ; i : t , : : : . , : : : , : : : : , : : : : .
+, ; j i i ; i ; i ; t , , G D t i i t i t t f D : # G L f L D G , ; , , . : : : : : : : : : : : : .
+i t i t t t ; i i i i G ; G , ; E t i i i L t i K G # W E L D D L K : , , : : : : : . . : . : : : .
+i i i i t i i ; t i ; i t j t D # W K t j j i j L E # G W G # D i L : : : : : : : : : : . : : : : :
+; j i t i ; i ; ; ; t j i K # L f t i j t i j i ; E # # # W G L # ; i , , ; , , ; : ; : . : . , : :
+; ; ; , i ; i t t i j , t t W j j j G i ; D , ; j ; j t # # E W W ; i i , , ; , ; , : , : : , , , ,
+i ; i t t j L f L t t f # K j K i t t t ; i ; : ; j , D G D W K # L W , . , , : , : : : , , , : : :
+; t j j j t f j f f j i f j i t , i ; ; i i G ; f i t f f W L E f j t : . : : : : : : , : , : : : :
+f j L f j t i t i t ; , : j ; t K t L j i t # # ; ; , K L , . D f , : : . , : , : : : . . : . : : ,
+i i ; t i i ; ; i i ; , ; ; ; W K f K G i W t ; ; ; t G i t j j , t D i , , ; : : . : . . : : . . .
+; ; i ; ; i ; i i i t ; ; ; i i K W W K # i ; , i , , L G E G K L E i j G D t i : : . . . . : : : .
+; i , ; i i i ; i t ; ; ; ; ; i t # j t ; j ; ; ; i f D ; W D D K W E K D W i : : : : : : : , : , :
+i i ; ; i t i t i i i ; ; ; i ; t E t i t ; ; i i ; W D # # # K E E E j ; : t : , : : : : : : . : ;
+; t t ; i t ; t ; i ; ; ; ; ; ; W j ; ; ; ; i ; i : f D # # W D K f f , ; , i j , : : : : : , : : :
+i ; t i i i t t ; i i ; i ; ; t # i i ; ; i ; , ; E j E # # E D D t j L L D j f : : , , , : , : ; :
+t i i i i t i i i i i i i i i i # f j ; ; ; t i : j t ; E E j i i f i f G t j ; , , : : : : : : : :
+i i i t t t i i t t i i i i ; i # t , t f K K D L j L i E G D G f f t , ; ; ; ; , : : : : , : : : ,
+i i t t t t t t t t j j t t i j # W K # i t t , f i t t t j t i i ; , ; ; ; ; ; ; , ; , , , , , , ,
+t t i i t t i j t t t t t t i # W i ; ; i t i t i i i i i i ; i ; i i i i i ; ; , ; , ; , i ; ; , ;
+t t t t i t t j j t i t t t i # i i i t i i i i i i i i i t i ; i ; ; ; ; ; , ; i ; ; ; ; ; i ; , ,
+j j t j t t j t t t t j t j W L i ; i i i i t t i i i t i i i ; i i i ; ; ; ; i t i ; t , i i ; ; ;
+j j j j t t t t t t t i W W # t i ; i i i i i i i i i ; i i i i i ; , ; i i i ; i f L j j D t ; , ;
+j j t t t t t t t ; i f K # ; i j i i i j t j L W W K K D ; f ; i ; i , t D G L W L j G # # W D K D
+t j j L f t t t t t i t # i G # K K # # G W W K W E W W E K E K K W D E E E E K K K L # E D E K W W
+W D f K K D i t t f i W # # W W # W # # # K W W K K E K E K E K E K E E K K E D t W D D L L G G D K
+# W # # # # # # # # D # W K W W K K W W W W W K W K E E K K K E K E K K K K # E f K # W W D E E W #
+# W # # # W W W # K # # W K K # W W W # # # # # # # # # W K # # # E W # # # # K W W W # # # # # # #
+# # # # # # # # # # # # # # # K # # # # # # # # # # # # # # # # W K W K E K W W E K K K K W G K K E
+W W W W # # W K W # # # W K E E K E K K K K K E G D K D D D D E D E E D D E K E E D D D G D E D K K
+W K W W K K E W K W L W # # # # # # # K K W W # W D E G G L E E L D D E D E E E E E D D G D D G K K
+j t L f E G f t W # W K # W W # W E ; W # K K W G E E K D W W W D K K D K G G D K E D E D K D D D K
+G E G G f D L D L L f L L L D E E E K K K W K W K W G K K E f D G G E D D D G D E D f D f G K D G D
+G E E D D D E E D D D D G D D D L G D D K E E E K K ; D G D D D i D f E L D D f L G G G L L D G D D
+*/
 
 #include <stdio.h>
 #include <stdlib.h>
+#include	"float.h"
 #include	"Parallel.h"
 
 /********************/
@@ -31,12 +69,24 @@ static int *h_i1_start[6],*h_i2_start[6],*h_iq_to_i1[6],*h_iq_to_i2[6];
 static double *tmpx,*tmpy,*tmpz;
 
 
+/* data fetch routines */
+int d3db_nfft3d() {return nfft3d;}
+int d3db_nfft3d_map() {return nfft3d_map;}
+int d3db_n2ft3d() {return n2ft3d;}
+int d3db_n2ft3d_map() {return n2ft3d_map;}
+int d3db_nq() {return nq; }
+int d3db_nx() {return nx;}
+int d3db_ny() {return ny;}
+int d3db_nz() {return nz;}
+int d3db_zplane_size() {return zplane_size;}
+
 
 /******************************************
  *                                        *
  *          generate_map_indexes          *
  *                                        *
- ******************************************/
+ ******************************************
+*/
 static void generate_map_indexes(int taskid, int np, int ny, int nz,
 		                         int p_map[], int q_map[], *nq_out)
 {
@@ -92,7 +142,8 @@ static void generate_map_indexes(int taskid, int np, int ny, int nz,
  *                                         *
  *              mapping_init               *
  *                                         *
- *******************************************/
+ *******************************************
+*/
 static void mapping_init()
 {
 	int np     = Parallel_np();
@@ -162,34 +213,99 @@ static void mapping_init()
 }
 
 
+static void d3db_fftbx_sub(int n, int nx, int nxh,
+		                   REAL tmpx[], REAL A[])
+{
+   int i;
+   REAL *atmp;
+
+   atmp = A;
+   for (i=0; i<n; ++i)
+   {
+	   drfftb(&nx,atmp,tmpx);
+	   atmp = &atmp[2*nxh];
+   }
+}
+
+static void d3db_fftby_sub2(int n, int ny,
+		                    REAL tmpy[], REAL A[])
+{
+	int i;
+	REAL *atmp;
+	atmp = A;
+	for (i=0; i<n; ++i)
+	{
+		dcfftb(&ny,atmp,tmpy);
+		atmp = &atmp[2*ny];
+	}
+}
+
+static void d3db_fftbz_sub2(int n, int nz,
+		                    REAL tmpz[], REAL A[])
+{
+	int i;
+	REAL *atmp;
+
+	atmp = A;
+	for (i=0; i<n; ++i)
+	{
+		dcfftb(&nz,atmp,tmpz);
+		atmp = &atmp[2*nz];
+	}
+}
+
+
+static void cshift1_fftb(int nx, int ny, int nq, int ne, REAL A[])
+{
+   int i,j,indx;
+
+   indx = 0;
+   for (j=0; j<(ny*nq*ne); ++j)
+   {
+	   for (i=1; i<nx; ++i)
+          A[indx+i] = A[indx+i+1];
+      indx = indx + (nx+2);
+   }
+}
+
+
+static void zeroend_fftb(int nx, int ny,int nq, int ne, REAL A[])
+{
+   int i,indx;
+
+   indx  = nx;
+   for (i=0; i<(ny*nq*ne); ++i)
+   {
+      A[indx]   = 0.0;
+      A[indx+1] = 0.0;
+      indx      = indx + (nx+2);
+   }
+}
+
 
 /***********************************
  *					               *
  *	          d3db_qtok   		   *
  *					               *
- ***********************************/
-void d3db_qtok(int q, int *k)
-{
-   *k = k_map[q];
-}
+ ***********************************
+*/
+void d3db_qtok(int q, int *k) {*k = k_map[q];}
 
 
 /***********************************
  *					               *
  *	          d3db_ktoqp  		   *
  *					               *
- ***********************************/
-void d3db_ktoqp(int k, int *q, int *p)
-{
-   *q = q_map[k];
-   *p = p_map[k];
-}
+ ***********************************
+*/
+void d3db_ktoqp(int k, int *q, int *p) {*q = q_map[k]; *p = p_map[k];}
 
 /***********************************
  *					               *
  *	       d3db_ijktoindexp	       *
  *					               *
- ***********************************/
+ ***********************************
+*/
 void d3db_ijktoindexp(int i, int j, int k,
 		              int *indx, int *p)
 {
@@ -217,7 +333,8 @@ void d3db_ijktoindexp(int i, int j, int k,
  *                                 *
  *           d3db_ijktoindex1p     *
  *                                 *
- ***********************************/
+ ***********************************
+*/
 void d3db_ijktoindex1p(int i, int j, int k,
 		               int *indx, int *p)
 {
@@ -239,19 +356,17 @@ void d3db_ijktoindex1p(int i, int j, int k,
    }
 }
 
-
-
-
 /***********************************
  *                                 *
- *           D3dB_ijktoindex2p     *
+ *       d3db_ijktoindex2p         *
  *                                 *
- ***********************************/
+ ***********************************
+*/
 void d3db_ijktoindex2p(int i,int j,int k,int *indx,int *p)
 {
    int q;
 
-   /**** slab mapping ****/
+   /* slab mapping */
    if (mapping==1)
    {
       q = q_map[j];
@@ -259,7 +374,7 @@ void d3db_ijktoindex2p(int i,int j,int k,int *indx,int *p)
       *indx = i + k*(nx+2) + q*(nx+2)*ny;
    }
 
-   /**** Hilbert mapping ****/
+   /* Hilbert mapping */
    else
    {
       q = q_map1[j+k*ny];
@@ -269,111 +384,13 @@ void d3db_ijktoindex2p(int i,int j,int k,int *indx,int *p)
 }
 
 
-/***********************************
- *					               *
- *	        d3db_nfft3d		       *
- *					               *
- ***********************************/
-int d3db_nfft3d()
-{
-   return nfft3d;
-}
-
-
-/***********************************
- *                                 *
- *         d3db_nfft3d_map         *
- *                                 *
- ***********************************/
-int d3db_nfft3d_map()
-{
-   return nfft3d_map;
-}
-
-
-/***********************************
- *					               *
- *	        d3db_n2ft3d		       *
- *					               *
- ***********************************/
-int d3db_n2ft3d()
-{
-   return n2ft3d;
-}
-
-
-/***********************************
- *                                 *
- *         d3db_n2ft3d_map         *
- *                                 *
- ***********************************/
-int d3db_n2ft3d_map()
-{
-   return n2ft3d_map;
-}
-
-
-
-/***********************************
- *					               *
- *	        d3db_nq			       *
- *				            	   *
- ***********************************/
-int d3db_nq()
-{
-   return nq;
-}
-
-
-/***********************************
- *					               *
- *	        d3db_nx			       *
- *					               *
- ***********************************/
-int d3db_nx()
-{
-   return nx;
-}
-
-
-/***********************************
- *					               *
- *	        d3db_ny			       *
- *					               *
- ***********************************/
-
-int d3db_ny()
-{
-   return ny;
-}
-
-
-/***********************************
- *					               *
- *	        d3db_nz			       *
- *					               *
- ***********************************/
-int d3db_nz()
-{
-   return nz;
-}
-
-/************************************
- *                                 *
- *         d3db_zplane_size        *
- *                                 *
- ***********************************/
-int d3db_zplane_size()
-{
-   return zplane_size;
-}
-
 
 /*****************************************
  *                                       *
  *        d3db_c_transpose_jk_init       *
  *                                       *
- *****************************************/
+ *****************************************
+*/
 static void d3db_c_transpose_jk_init()
 {
 	int index1,index2,it,proc_to,proc_from,qhere,phere,qto,pto,qfrom,pfrom,itmp,i,j,k;
@@ -434,7 +451,8 @@ static void d3db_c_transpose_jk_init()
  *                                       *
  *       d3db_c_transpose_ijk_init       *
  *                                       *
- *****************************************/
+ *****************************************
+*/
 static void d3db_c_transpose_ijk_init()
 {
 
@@ -756,6 +774,26 @@ static void d3db_fft_end()
 	free(tmpz);
 }
 
+
+/* |------||------||------||------|\\//|------||------||------||------||------|
+    //\\//\\//\\//\\//\\///\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\/
+    \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\
+    //\\//\\//\\//\\//\\///\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\/
+    \\//\\//\\//\\//\\/(    )\\//\\//\\//\\//\\//\\//\\//\\//\\//\\///\\//\\//
+    //\\//\\//\\//\\//\\(oo)//\\//\\//\\//\\//\\//\\//\\//\\//\//\\//\\//\\//\
+    \\//\\//\\/)\.-----/(O O)\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\
+    //\\//\\//# ;       / u//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\\//\\//
+    \\//\\//\\//(  .   |} )\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\/
+    //\\//\\//\\/|/ `.;|/;//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\
+    \\//\\//\\//\"     " "\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//
+    \\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\
+    //\\//\\//\\//\\//\\///\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\//\\/
+   |------||------||------||------|\\//|------||------||------||------||------|*/
+
+
+
+
+
 /*****************************************
  *                                       *
  *              d3db_end                 *
@@ -800,7 +838,9 @@ void d3dB_end()
  *                                       *
  *               d3db_init               *
  *                                       *
- *****************************************/
+ *****************************************
+
+*/
 void d3db_init(int nx_in, int ny_in, int nz_in, map_in)
 {
 	int np     = Parallel_np();
@@ -825,439 +865,155 @@ void d3db_init(int nx_in, int ny_in, int nz_in, map_in)
 }
 
 
+/***********************************
+ *			           *
+ *	     d3db_cr_fft3b	   *
+ *			           *
+ ***********************************
+                      .;;,
+ .,.               .,;;;;;,
+;;;;;;;,,        ,;;%%%%%;;
+ `;;;%%%%;;,.  ,;;%%;;%%%;;
+   `;%%;;%%%;;,;;%%%%%%%;;'
+     `;;%%;;%:,;%%%%%;;%%;;,
+        `;;%%%,;%%%%%%%%%;;;
+           `;:%%%%%%;;%%;;;'
+              .:::::::.
+                   s.
+ This routine performs the operation of a three dimensional complex to complex
+ inverse fft
 
+     A(nx,ny(nb),nz(nb)) <- FFT3^(-1)[A(kx,ky,kz)]
 
-*     ***********************************
-*     *					*
-*     *	        D3dB_cr_fft3b		*
-*     *					*
-*     ***********************************
+ Entry - A: a column distributed 3d block
+         tmp2,tmp3: temporary work spaces that must be at
+              least the size of (real) n2ft3d
+ Exit - A is transformed and the imaginary
+        part of A is set to zero
+ uses - D3dB_c_transpose_jk, d3db_c_transpose_ijk
+*/
 
-      subroutine D3dB_cr_fft3b(nb,A)
-
-*****************************************************
-*                                                   *
-*      This routine performs the operation of       *
-*      a three dimensional complex to complex       *
-*      inverse fft                                  *
-*           A(nx,ny(nb),nz(nb)) <- FFT3^(-1)[A(kx,ky,kz)]   *
-*                                                   *
-*      Entry - 					    *
-*              A: a column distribuded 3d block     *
-*              tmp: tempory work space must be at   *
-*                    least the size of (complex)    *
-*                    (nfft*nfft + 1) + 10*nfft      *
-*                                                   *
-*       Exit - A is transformed and the imaginary   *
-*              part of A is set to zero             *
-*       uses - D3dB_c_transpose_jk, dcopy           *
-*                                                   *
-*****************************************************
-
-      implicit none
-      integer nb
-      complex*16  A(*)
-
-
-#include "mafdecls.fh"
-#include "errquit.fh"
-
-#include "D3dB.fh"
-
-      integer tmpx(2,NBLOCKS),tmpy(2,NBLOCKS),tmpz(2,NBLOCKS)
-      common    / D3dB_fft / tmpx,tmpy,tmpz
-
-
-
-*     *** local variables ***
-      integer i,j,k,q,indx
-      integer nxh,nxhy,nxhz,indx0,indx1
-
-
-      !integer tmp1(2),tmp2(2),tmp3(2)
-      integer tmp2(2),tmp3(2)
-      logical value
-
-      call nwpw_timing_start(1)
-
-*     ***** allocate temporary space ****
-      !call D3dB_nfft3d(nb,nfft3d)
-      value = MA_push_get(mt_dcpl,(nfft3d(nb)),'ffttmp2',
-     >                    tmp2(2),tmp2(1))
-      value = value.and.
-     >      MA_push_get(mt_dbl,(n2ft3d(nb)),'ffttmp3',tmp3(2),tmp3(1))
-      if (.not. value) call errquit('out of stack memory',0, MA_ERR)
-
-       nxh = (nx(nb)/2+1)
-       nxhz = nxh*nz(nb)
-       nxhy = nxh*ny(nb)
-
-      !**********************
-      !**** slab mapping ****
-      !**********************
-      if (mapping.eq.1) then
-*     ********************************************
-*     ***         Do a transpose of A          ***
-*     ***      A(kx,kz,ky) <- A(kx,ky,kz)      ***
-*     ********************************************
-c     call D3dB_c_transpose_jk(nb,A,dcpl_mb(tmp2(1)),dbl_mb(tmp3(1)))
-
-*     *************************************************
-*     ***     do fft along kz dimension             ***
-*     ***   A(kx,nz(nb),ky) <- fft1d^(-1)[A(kx,kz,ky)]  ***
-*     *************************************************
-#ifdef MLIB
-      !call z1dfft(dbl_mb(tmp3(1)),nz(nb),dcpl_mb(tmpz(1)),-3,ierr)
-      do q=1,nq(nb)
-      do i=1,(nx(nb)/2+1)
-         do k=1,nz(nb)
-            indx = i + (k-1)*(nx(nb)/2+1) + (q-1)*(nx(nb)/2+1)*nz(nb)
-            dcpl_mb(tmp2(1)+k-1) = A(indx)
-         end do
-         call z1dfft(dcpl_mb(tmp2(1)),nz(nb),
-     >               dcpl_mb(tmpz(1,nb)),-2,ierr)
-         do k=1,nz(nb)
-            indx = i + (k-1)*(nx(nb)/2+1) + (q-1)*(nx(nb)/2+1)*nz(nb)
-            A(indx) = dcpl_mb(tmp2(1)+k-1)
-         end do
-      end do
-      end do
-      !call dscal((nx(nb)+2)*ny(nb)*nq(nb),dble(nz(nb)),A,1)
-
-#else
-
-#ifdef FFTW3
-      do q=1,nq(nb)
-        indx = 1+(q-1)*nxhz
-        call dfftw_execute_dft(plans(1,nb),A(indx),A(indx))
-      end do
-#else
-      !call dcffti(nz(nb),dcpl_mb(tmp1(1)))
-      indx0 = 0
-      do q=1,nq(nb)
-      do i=1,nxh
-
-         indx  = i + indx0
-         indx1 = indx
-         do k=1,nz(nb)
-            dcpl_mb(tmp2(1)+k-1) = A(indx)
-            indx = indx + nxh
-         end do
-         call dcfftb(nz(nb),dcpl_mb(tmp2(1)),dcpl_mb(tmpz(1,nb)))
-         do k=1,nz(nb)
-            A(indx1) = dcpl_mb(tmp2(1)+k-1)
-            indx1 = indx1 + nxh
-         end do
-
-      end do
-      indx0 = indx0 + nxhz
-      end do
-#endif
-#endif
-
-*     ********************************************
-*     ***         Do a transpose of A          ***
-*     ***      A(kx,ky,nz(nb)) <- A(kx,nz(nb),ky)      ***
-*     ********************************************
-      call D3dB_c_transpose_jk(nb,A,dcpl_mb(tmp2(1)),dbl_mb(tmp3(1)))
-
-*     *************************************************
-*     ***     do fft along ky dimension             ***
-*     ***   A(kx,ny(nb),nz(nb)) <- fft1d^(-1)[A(kx,ky,nz(nb))]  ***
-*     *************************************************
-#ifdef MLIB
-      !call z1dfft(dbl_mb(tmp3(1)),ny(nb),dcpl_mb(tmp1(1)),-3,ierr)
-      do q=1,nq(nb)
-      do i=1,(nx(nb)/2+1)
-         do j=1,ny(nb)
-            indx = i + (j-1)*(nx(nb)/2+1) + (q-1)*(nx(nb)/2+1)*ny(nb)
-            dcpl_mb(tmp2(1)+j-1) = A(indx)
-         end do
-         call z1dfft(dcpl_mb(tmp2(1)),ny(nb),
-     >               dcpl_mb(tmpy(1,nb)),-2,ierr)
-         do j=1,ny(nb)
-            indx = i + (j-1)*(nx(nb)/2+1) + (q-1)*(nx(nb)/2+1)*ny(nb)
-            A(indx) = dcpl_mb(tmp2(1)+j-1)
-         end do
-      end do
-      end do
-      !call dscal((nx(nb)+2)*ny(nb)*nq(nb),dble(ny(nb)),A,1)
-#else
-
-#ifdef FFTW3
-      do q=1,nq(nb)
-         indx = 1+(q-1)*nxhy
-         call dfftw_execute_dft(plans(2,nb),A(indx),A(indx))
-      end do
-#else
-      !call dcffti(ny(nb),dcpl_mb(tmp1(1)))
-      indx0 = 0
-      do q=1,nq(nb)
-      do i=1,(nx(nb)/2+1)
-
-         indx  = i + indx0
-         indx1 = indx
-         do j=1,ny(nb)
-            dcpl_mb(tmp2(1)+j-1) = A(indx)
-            indx = indx + nxh
-         end do
-         call dcfftb(ny(nb),dcpl_mb(tmp2(1)),dcpl_mb(tmpy(1,nb)))
-         do j=1,ny(nb)
-            A(indx1) = dcpl_mb(tmp2(1)+j-1)
-            indx1 = indx1 + nxh
-         end do
-
-      end do
-      indx0 = indx0 + nxhy
-      end do
-#endif
-#endif
-
-*     *************************************************
-*     ***     do fft along kx dimension             ***
-*     ***   A(nx(nb),ny(nb),nz(nb)) <- fft1d^(-1)[A(kx,ny(nb),nz(nb))]  ***
-*     *************************************************
-#ifdef MLIB
-      !call drc1ft (dbl_mb(tmp3(1)),nx(nb),dcpl_mb(tmp1(1)),-3,ierr)
-      do q=1,nq(nb)
-      do j=1,ny(nb)
-         indx = 1 + (j-1)*(nx(nb)/2+1) + (q-1)*(nx(nb)/2+1)*ny(nb)
-         call drc1ft(A(indx),nx(nb),dcpl_mb(tmpx(1,nb)),-2,ierr)
-      end do
-      end do
-c     call drcfts(A,nx(nb),1,ny(nb)*nq(nb),
-c    >                  nx(nb)+2,-2,ierr)
-c     call dscal((nx(nb)+2)*ny(nb)*nq(nb),dble(nx(nb)),A,1)
-
-#else
-
-#ifdef FFTW3
-      call dfftw_execute_dft_c2r(plans(3,nb),A,A)
-
-#else
-      !call drffti(nx(nb),dcpl_mb(tmp1(1)))
-
-c      do q=1,nq(nb)
-c      do j=1,ny(nb)
-c         indx = 1 + (j-1)*(nx(nb)/2+1) + (q-1)*(nx(nb)/2+1)*ny(nb)
-c         call dcopy((nx(nb)+2),A(indx),1,dbl_mb(tmp3(1)),1)
-c         do i=2,nx(nb)
-c            dbl_mb(tmp3(1)+i-1) = dbl_mb(tmp3(1)+i)
-c         end do
-c         call drfftb(nx(nb),dbl_mb(tmp3(1)),dcpl_mb(tmp1(1)))
-c         dbl_mb(tmp3(1)+nx(nb)) = 0.0d0
-c         dbl_mb(tmp3(1)+nx(nb)+1) = 0.0d0
-c         call dcopy((nx(nb)+2),dbl_mb(tmp3(1)),1,A(indx),1)
-c      end do
-c      end do
-
-      call cshift1_fftb(nx(nb),ny(nb),nq(nb),1,A)
-      indx = 1
-      do q=1,nq(nb)
-      do j=1,ny(nb)
-         !indx = 1 + (j-1)*(nx(nb)/2+1) + (q-1)*(nx(nb)/2+1)*ny(nb)
-         call drfftb(nx(nb),A(indx),dcpl_mb(tmpx(1,nb)))
-         indx = indx + nxh
-      end do
-      end do
-      call zeroend_fftb(nx(nb),ny(nb),nq(nb),1,A)
-#endif
-
-#endif
-
-
-      !*************************
-      !**** hilbert mapping ****
-      !*************************
-      else
-
-
-*     *************************************************
-*     ***     do fft along kz dimension             ***
-*     ***   A(nz(nb),kx,ky) <- fft1d^(-1)[A(kz,kx,ky)]  ***
-*     *************************************************
-#ifdef MLIB
-      indx = 1
-      do q=1,nq3(nb)
-         !indx = 1 + (q-1)*nz(nb)
-         call z1dfft(A(indx),nz(nb),dcpl_mb(tmpz(1,nb)),-2,ierr)
-         indx = indx + nz(nb)
-      end do
-#else
-
-#ifdef FFTW3
-      call dfftw_execute_dft(plans(11,nb),A,A)
-
-#else
-#ifdef USE_OPENMP
-      call D3dB_fftbz_sub2(nq3(nb),nz(nb),dcpl_mb(tmpz(1,nb)),A)
-#else
-      indx = 1
-      do q=1,nq3(nb)
-         call dcfftb(nz(nb),A(indx),dcpl_mb(tmpz(1,nb)))
-         indx = indx + nz(nb)
-      end do
-#endif
-#endif
-#endif
-
-      call D3dB_c_transpose_ijk(nb,3,A,dcpl_mb(tmp2(1)),dbl_mb(tmp3(1)))
-
-*     *************************************************
-*     ***     do fft along ky dimension             ***
-*     ***   A(ny(nb),nz(nb),kx) <- fft1d^(-1)[A(ky,nz(nb),kx)]  ***
-*     *************************************************
-#ifdef MLIB
-      indx = 1
-      do q=1,nq2(nb)
-         !indx = 1 + (q-1)*ny(nb)
-         call z1dfft(A(indx),ny(nb),dcpl_mb(tmpy(1,nb)),-2,ierr)
-         indx = indx + ny(nb)
-      end do
-#else
-
-#ifdef FFTW3
-      call dfftw_execute_dft(plans(12,nb),A,A)
-
-#else
-#ifdef USE_OPENMP
-      call D3dB_fftby_sub2(nq2(nb),ny(nb),dcpl_mb(tmpy(1,nb)),A)
-#else
-      indx = 1
-      do q=1,nq2(nb)
-         call dcfftb(ny(nb),A(indx),dcpl_mb(tmpy(1,nb)))
-         indx = indx + ny(nb)
-      end do
-#endif
-#endif
-#endif
-
-      call D3dB_c_transpose_ijk(nb,4,A,dcpl_mb(tmp2(1)),dbl_mb(tmp3(1)))
-
-*     *************************************************
-*     ***     do fft along kx dimension             ***
-*     ***   A(nx(nb),ny(nb),nz(nb)) <- fft1d^(-1)[A(kx,ny(nb),nz(nb))]  ***
-*     *************************************************
-#ifdef MLIB
-      indx = 1
-      do q=1,nq1(nb)
-         !indx = 1 + (q-1)*(nx(nb)/2+1)
-         call drc1ft(A(indx),nx(nb),dcpl_mb(tmpx(1,nb)),-2,ierr)
-         indx = indx + nxh
-      end do
-#else
-
-#ifdef FFTW3
-      call dfftw_execute_dft_c2r(plans(13,nb),A,A)
-
-#else
-#ifdef USE_OPENMP
-      call cshift1_fftb(nx(nb),nq1(nb),1,1,A)
-      call D3dB_fftbx_sub(nq1(nb),nx(nb),nxh,dcpl_mb(tmpx(1,nb)),A)
-      call zeroend_fftb(nx(nb),nq1(nb),1,1,A)
-#else
-      call cshift1_fftb(nx(nb),nq1(nb),1,1,A)
-      indx = 1
-      do q=1,nq1(nb)
-         call drfftb(nx(nb),A(indx),dcpl_mb(tmpx(1,nb)))
-         indx = indx + nxh
-      end do
-      call zeroend_fftb(nx(nb),nq1(nb),1,1,A)
-#endif
-#endif
-#endif
-
-      end if
-
-
-*     **** deallocate temporary space  ****
-      value = MA_pop_stack(tmp3(2))
-      value = value.and.MA_pop_stack(tmp2(2))
-      !value = MA_pop_stack(tmp1(2))
-      if (.not. value) call errquit('popping stack memory',0,MA_ERR)
-
-      call nwpw_timing_end(1)
-      return
-      end
-
-      subroutine D3dB_fftbx_sub(n,nx,nxh,tmpx,A)
-      implicit none
-      integer n,nx,nxh
-      real*8     tmpx(2*nx+15)
-      complex*16 A(nxh,n)
-      integer i
-!$omp parallel default(private) shared(A,n) private(i)
-!$omp& firstprivate(nx,tmpx)
-!$omp do schedule(static)
-      do i=1,n
-         call drfftb(nx,A(1,i),tmpx)
-      end do
-!$omp end do nowait
-!$omp end parallel
-      return
-      end
-
-      subroutine D3dB_fftby_sub2(n,ny,tmpy,A)
-      implicit none
-      integer n,ny
-      real*8     tmpy(4*ny+15)
-      complex*16 A(ny,n)
-      integer i
-!$omp parallel default(private) shared(A,n) private(i)
-!$omp& firstprivate(ny,tmpy)
-!$omp do schedule(static)
-      do i=1,n
-         call dcfftb(ny,A(1,i),tmpy)
-      end do
-!$omp end do nowait
-!$omp end parallel
-      return
-      end
-
-      subroutine D3dB_fftbz_sub2(n,nz,tmpz,A)
-      implicit none
-      integer n,nz
-      real*8     tmpz(4*nz+15)
-      complex*16 A(nz,n)
-      integer i
-!$omp parallel default(private) shared(A,n) private(i)
-!$omp& firstprivate(nz,tmpz)
-!$omp do schedule(static)
-      do i=1,n
-         call dcfftb(nz,A(1,i),tmpz)
-      end do
-!$omp end do nowait
-!$omp end parallel
-      return
-      end
-
-static void cshift1_fftb(int nx, int ny, int nq, int ne, double A[])
+void d3db_cr_fft3b(REAL A[], REAL tmp2[], REAL tmp3[])
 {
-   int i,j,indx;
+   int i,j,k,q,indx, nxh,nxhy,nxhz,indx0,indx1;
 
-   indx = 0;
-   for (j=0; j<(ny*nq*ne); ++j)
+   nxh = (nx/2+1);
+   nxhz = nxh*nz;
+   nxhy = nxh*ny;
+
+
+   /**** slab mapping ****/
+   if (mapping==1)
    {
-	   for (i=1; i<nx; ++i)
-          A[indx+i] = A[indx+i+1];
-      indx = indx + (nx+2);
+      /* Do a transpose of A, A(kx,kz,ky) <- A(kx,ky,kz) */
+      //d3db_c_transpose_jk(A,tmp2,tmp3);
+
+
+      /* fft along kz dimension, A(kx,nz,ky) <- fft1d^(-1)[A(kx,kz,ky)] */
+      indx0 = 0;
+      for (q=0; q<nq; ++q)
+      {
+         for (i=0; i<nxh; ++i)
+         {
+            indx  = i + indx0;
+            indx1 = indx;
+            for (k=0; k<nz; ++k)
+            {
+               tmp2[2*k]   = A[2*indx];
+               tmp2[2*k+1] = A[2*indx+1];
+        	   indx += nxh;
+            }
+            dcfftb(&nz,tmp2,tmpz);
+            for (k=0; k<nz; ++k)
+            {
+               A[2*indx1]   = tmp2[2*k];
+               A[2*indx1+1] = tmp2[2*k+1];
+               indx1 += nxh;
+            }
+         }
+         indx0 = indx0 + nxhz;
+      }
+
+      /* transpose of A, A(kx,ky,nz) <- A(kx,nz,ky) */
+      d3db_c_transpose_jk(A,tmp2,tmp3);
+
+      /* fft along ky dimension, A(kx,ny,nz) <- fft1d^(-1)[A(kx,ky,nz)] */
+      indx0 = 0;
+      for (q=0; q<nq; ++q)
+      {
+         for (i=0; i<(nx/2+1); ++i)
+         {
+            indx  = i + indx0;
+            indx1 = indx;
+            for (j=0; j<ny; ++j)
+            {
+               tmp2[2*j]   = A[2*indx];
+               tmp2[2*j+1] = A[2*indx+1];
+               indx += nxh;
+            }
+            dcfftb(&ny,tmp2,tmpy);
+            for (j=0; j<ny; ++j)
+            {
+               A[2*indx1]   = tmp2[2*j];
+               A[2*indx1+1] = tmp2[2*j+1];
+               indx1 += nxh;
+            }
+         }
+         indx0 += nxhy;
+      }
+
+
+      /* fft along kx dimension, A(nx,ny,nz) <- fft1d^(-1)[A(kx,ny,nz)] */
+      cshift1_fftb(nx,ny,nq,1,A);
+      indx = 0;
+      for (q=0; q<nq; ++q)
+      for (j=0; j<ny; ++j)
+      {
+         drfftb(&nx,A[2*indx],tmpx);
+         indx += nxh;
+      }
+      zeroend_fftb(nx,ny,nq,1,A);
    }
-}
 
-
-static void zeroend_fftb(int nx, int ny,int nq, int ne, double A[])
-{
-   int i,indx;
-
-   indx  = nx;
-   for (i=0; i<(ny*nq*ne); ++i)
+   /*************************
+    **** hilbert mapping ****
+    *************************/
+   else
    {
-      A[indx]   = 0.0;
-      A[indx+1] = 0.0;
-      indx      = indx + (nx+2);
+       /* fft along kz dimension, A(nz,kx,ky) <- fft1d^(-1)[A(kz,kx,ky)] */
+      d3db_fftbz_sub2(nz,tmpz,A)
+      d3db_c_transpose_ijk(3,A,tmp2,tmp3);
+
+      /* fft along ky dimension,A(ny,nz,kx) <- fft1d^(-1)[A(ky,nz,kx)] */
+      d3db_fftby_sub2(ny,tmpy,A);
+      d3db_c_transpose_ijk(4,A,tmp2,tmp3);
+
+      /* fft along kx dimension, A(nx,ny,nz) <- fft1d^(-1)[A(kx,ny,nz)] */
+      cshift1_fftb(nx,nq1,1,1,A);
+      d3db_fftbx_sub(nq1,nx,nxh,tmpx,A);
+      zeroend_fftb(nx,nq1,1,1,A);
    }
 }
 
 
 
+/***********************************
+ *                                 *
+ *         d3db_rc_fft3f           *
+ *                                 *
+ ***********************************
+           ,,_
+       zd$$??=
+     z$$P? F:`c,                _
+    d$$, `c'cc$$i           ,cd$?R
+   $$$$ cud$,?$$$i       ,=P"2?z "
+    $" " ?$$$,?$$$.    ,-''`>, bzP
+     'cLdb,?$$,?$$$   ,h' "I$'J$P
+  ... `?$$$,"$$,`$$h  $$PxrF'd$"
+d$PP""?-,"?$$,?$h`$$,,$$'$F44"
+?,,_`=4c,?=,"?hu?$`?L4$'? '
+   `""?==""=-"" `""-`'_,,,,
+           .ccu?m?e?JC,-,"=?
+                     """=='?"
+*/
 
