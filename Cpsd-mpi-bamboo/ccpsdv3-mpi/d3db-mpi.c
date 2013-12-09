@@ -885,7 +885,7 @@ proc#=0...(np-1)
 This transpose uses more buffer space then transpose2
 
 */
-void d3db_c_transpose_ijk(int op, REAL A[], REAL tmp1[], REAL tmp2[])
+static void d3db_c_transpose_ijk(int op, REAL A[], REAL tmp1[], REAL tmp2[])
 {
 
    int i,it,proc_to,proc_from,msgtype,msglen,nnfft3d;
@@ -897,7 +897,7 @@ void d3db_c_transpose_ijk(int op, REAL A[], REAL tmp1[], REAL tmp2[])
    int np     =  Parallel_np();
 
    request = (MPI_Request *) malloc(np*sizeof(MPI_Request));
-   status  = (MPI_Status *)   malloc(4*np*sizeof(MPI_Status));
+   status  = (MPI_Status *)  malloc(4*np*sizeof(MPI_Status));
 
 
    /* pack A(i) array */
@@ -927,7 +927,7 @@ void d3db_c_transpose_ijk(int op, REAL A[], REAL tmp1[], REAL tmp2[])
 
       if (msglen>0)
       {
-         if (MPI_Irecv(tmp2[2*h_i2_start[op][it]],2*msglen,MPI_DOUBLE_PRECISION,
+         if (MPI_Irecv(&tmp2[2*h_i2_start[op][it]],2*msglen,MPI_DOUBLE_PRECISION,
         		       proc_from,msgtype,
         		       MPI_COMM_WORLD,&request[reqcnt])!=MPI_SUCCESS)
             printf("d3db_c_transpose_ijk error: MPI_Irecv failed\n");
@@ -944,7 +944,7 @@ void d3db_c_transpose_ijk(int op, REAL A[], REAL tmp1[], REAL tmp2[])
          msgtype = 29;
 
          if (msglen>0)
-            if (MPI_Send(tmp1[2*h_i1_start[op][it]],2*msglen,MPI_DOUBLE_PRECISION,
+            if (MPI_Send(&tmp1[2*h_i1_start[op][it]],2*msglen,MPI_DOUBLE_PRECISION,
                          proc_to,msgtype,MPI_COMM_WORLD)!=MPI_SUCCESS)
                printf("d3db_c_transpose_ijk error: MPI_Send failed\n");
    }
@@ -964,196 +964,98 @@ void d3db_c_transpose_ijk(int op, REAL A[], REAL tmp1[], REAL tmp2[])
       A[2*i]   = tmp2[2*h_iq_to_i2[op][i]];
       A[2*i+1] = tmp2[2*h_iq_to_i2[op][i]+1];
    }
+   free(request);
+   free(status);
 }
 
 
+/***********************************
+ *					               *
+ *	   D3dB_t_transpose_ijk		   *
+ *					               *
+ ***********************************
+This routine performs the operation
+         A(i,k,j) <- A(i,j,k)
 
+np = the number of worker nodes
+proc#=0...(np-1)
 
+this transpose uses more buffer space then transpose2
+*/
+static void d3db_t_transpose_ijk(int op, REAL A[], REAL tmp1[], REAL tmp2[])
+{
+   int i,it,proc_to,proc_from,msgtype,msglen,nnfft3d;
+   int reqcnt;
+   MPI_Request *request;
+   MPI_Status  *status;
 
-*     ***********************************
-*     *					*
-*     *	   D3dB_t_transpose_ijk		*
-*     *					*
-*     ***********************************
+   int taskid = Parallel_taskid();
+   int np     =  Parallel_np();
 
-      subroutine D3dB_t_transpose_ijk(nb,op,A,tmp1,tmp2)
+   request = (MPI_Request *) malloc(np*sizeof(MPI_Request));
+   status  = (MPI_Status *)  malloc(4*np*sizeof(MPI_Status));
 
-*****************************************************
-*                                                   *
-*      This routine performs the operation          *
-*               A(i,k,j) <- A(i,j,k)                *
-*                                                   *
-*      np = the number of worker nodes              *
-*      proc#=0...(np-1)
-*                                                   *
-*       this transpose uses more buffer space       *
-*       then transpose2                             *
-*****************************************************
-      implicit none
-      integer nb,op
-      real*8  A(*)
-      real*8  tmp1(*),tmp2(*)
+   /* pack A(i) array */
+   if ((op==1)||(op==5)) nnfft3d = (nx/2+1)*nq1;
+   if ((op==2)||(op==4)) nnfft3d = (ny)    *nq2;
+   if ((op==3)||(op==6)) nnfft3d = (nz)    *nq3;
 
-#include "mafdecls.fh"
-#include "errquit.fh"
-#include "mpif.h"
-#include "D3dB.fh"
+   for (i=0; i<nnfft3d; ++i)
+      tmp1[h_iq_to_i1[op][i]] = A[i];
 
-#ifdef MPI4
-#include "stupid_mpi4.fh"
-#endif
+   /* it = 0, transpose data on same thread */
+   msglen = h_i2_start[op][1] - h_i2_start[op][0];
+   for (i=0; i<msglen; ++i)
+	   tmp2[h_i2_start[op]+i] = tmp1[h_i1_start[op]+i];
 
+   /* receive packed array data */
+   reqcnt = 0;
+   for (it=1; it<np; ++it)
+   {
+      /* synchronous receive of tmp */
+      proc_from = (taskid-it+np)%np;
+      msgtype = 39;
+      msglen = h_i2_start[op][it+1] + h_i2_start[op][it];
 
-*     **** indexing variables ****
-      integer h_iq_to_i1(2,6,NBLOCKS)
-      integer h_iq_to_i2(2,6,NBLOCKS)
-      integer h_i1_start(2,6,NBLOCKS)
-      integer h_i2_start(2,6,NBLOCKS)
-      common / trans_blk_ijk / h_iq_to_i1,
-     >                         h_iq_to_i2,
-     >                         h_i1_start,
-     >                         h_i2_start
+      if (msglen>0)
+      {
+         if (MPI_Irecv(&tmp2[h_i2_start[op][it]],msglen,MPI_DOUBLE_PRECISION,
+        		       proc_from,msgtype,
+        		       MPI_COMM_WORLD,&request[reqcnt])!=MPI_SUCCESS)
+        	 printf("d3db_t_transpose_ijk error: MPI_Irecv failed\n");
+         ++reqcnt;
+      }
+   }
 
+   /* send packed array to other processors */
+   for (it=1; it<np; ++it)
+   {
+      /* synchronous send of tmp */
+      proc_to = (taskid+it)%np;
+      msglen  = h_i1_start[op][1] - h_i1_start[op][0];
+      msgtype = 39;
 
+      if (msglen>0)
+         if (MPI_Send(&tmp1[h_i1_start[op][it]],msglen,MPI_DOUBLE_PRECISION,
+                      proc_to,msgtype,MPI_COMM_WORLD)!=MPI_SUCCESS)
+            printf("d3db_t_transpose_ijk error: MPI_Send failed\n");
+   }
 
-*     **** local variables ***
-      logical value
-      integer i,nnfft3d
-      integer proc_to,proc_from,it
-      integer msgtype,source
-c     integer msglen,type,nbytes
-c     integer msgid
-      integer msglen
-c     integer status(MPI_STATUS_SIZE,512),request(512),reqcnt
-      integer request(2),reqcnt
-      integer taskid,np
-      integer mpierr
+   /* wait for completion of mp_send, also do a sync */
+   if (np>1)
+      if (MPI_Waitall(reqcnt,request,status) != MPI_SUCCESS)
+         printf("d3db_t_transpose_ijk error: MPI_Waitall failed\n");
 
-*     **** external functions ****
-      integer  Parallel2d_convert_taskid_i,Parallel_comm_world
-      external Parallel2d_convert_taskid_i,Parallel_comm_world
+   /* unpack A(i) array */
+   if ((op==4)||(op==6)) nnfft3d = (n)/2+1)*nq1;
+   if ((op==1)||(op==3)) nnfft3d = (ny)    *nq2;
+   if ((op==2)||(op==5)) nnfft3d = (nz)    *nq3;
 
-      call Parallel2d_taskid_i(taskid)
-      call Parallel2d_np_i(np)
-
-
-*     **** allocate memory ****
-      value = MA_push_get(mt_int,np,
-     >                     'request',request(2),request(1))
-      if (.not. value)
-     > call errquit(' D3dB_t_transpose_ijk:out of stack',0,MA_ERR)
-
-
-*     **** pack A(i) array ****
-      if ((op.eq.1).or.(op.eq.5)) nnfft3d = (nx(nb)/2+1)*nq1(nb)
-      if ((op.eq.2).or.(op.eq.4)) nnfft3d = (ny(nb))    *nq2(nb)
-      if ((op.eq.3).or.(op.eq.6)) nnfft3d = (nz(nb))    *nq3(nb)
-#ifndef CRAY
-!DIR$ ivdep
-#endif
-      do i=1,nnfft3d
-         tmp1(int_mb(h_iq_to_i1(1,op,nb)+i-1)) = A(i)
-      end do
-
-*     **** it = 0, transpose data on same thread ****
-      msglen = int_mb(h_i2_start(1,op,nb)+2-1)
-     >       - int_mb(h_i2_start(1,op,nb)+1-1)
-      call dcopy(msglen,tmp1(int_mb(h_i1_start(1,op,nb))),1,
-     >                  tmp2(int_mb(h_i2_start(1,op,nb))),1)
-
-
-*     **** receive packed array data ****
-      reqcnt = 0
-      do it = 1,np-1
-
-*        **** synchronous receive of tmp ****
-         proc_from = mod((taskid)-it+np, np)
-
-         msgtype = 39
-         source=proc_from
-         msglen = (int_mb(h_i2_start(1,op,nb)+it+2-1)
-     >          -  int_mb(h_i2_start(1,op,nb)+it+1-1))
-
-
-         if (msglen.gt.0) then
-            reqcnt = reqcnt + 1
-#ifdef MPI4
-            stupid_msglen = msglen
-            stupid_type   = msgtype
-            stupid_taskid = Parallel2d_convert_taskid_i(source)
-            call MPI_IRECV(tmp2(int_mb(h_i2_start(1,op,nb)+it+1-1)),
-     >                    stupid_msglen,stupid_double,
-     >                    stupid_taskid,
-     >                    stupid_type,stupid_world,
-     >                    stupid_request,stupid_ierr)
-            int_mb(request(1)+reqcnt-1) = 0
-            int_mb(request(1)+reqcnt-1) = stupid_request
-#else
-            call MPI_IRECV(tmp2(int_mb(h_i2_start(1,op,nb)+it+1-1)),
-     >                    msglen,MPI_DOUBLE_PRECISION,
-     >                    Parallel2d_convert_taskid_i(source),
-     >                    msgtype,Parallel_comm_world(),
-     >                    int_mb(request(1)+reqcnt-1),mpierr)
-#endif
-         end if
-
-      end do
-
-*     **** send packed array to other processors ****
-      do it = 1,np-1
-
-*        **** synchronous send of tmp ****
-         proc_to   = mod((taskid)+it, np)
-         msglen    = (int_mb(h_i1_start(1,op,nb)+it+2-1)
-     >              - int_mb(h_i1_start(1,op,nb)+it+1-1))
-         msgtype   = 39
-
-         if (msglen.gt.0) then
-#ifdef MPI4
-            stupid_msglen = msglen
-            stupid_type   = msgtype
-            stupid_taskid = Parallel2d_convert_taskid_i(proc_to)
-            call MPI_SEND(tmp1(int_mb(h_i1_start(1,op,nb)+it+1-1)),
-     >                     stupid_msglen,stupid_double,
-     >                     stupid_taskid,
-     >                     stupid_type,stupid_world,stupid_ierr)
-#else
-            call MPI_SEND(tmp1(int_mb(h_i1_start(1,op,nb)+it+1-1)),
-     >                     msglen,MPI_DOUBLE_PRECISION,
-     >                     Parallel2d_convert_taskid_i(proc_to),
-     >                     msgtype,Parallel_comm_world(),mpierr)
-#endif
-         end if
-
-      end do
-
-
-*     **** wait for completion of mp_send, also do a sync ****
-      if (np.gt.1) call Parallel_mpiWaitAll(reqcnt,int_mb(request(1)))
-
-
-*     **** unpack A(i) array ****
-      if ((op.eq.4).or.(op.eq.6)) nnfft3d = (nx(nb)/2+1)*nq1(nb)
-      if ((op.eq.1).or.(op.eq.3)) nnfft3d = (ny(nb))    *nq2(nb)
-      if ((op.eq.2).or.(op.eq.5)) nnfft3d = (nz(nb))    *nq3(nb)
-#ifndef CRAY
-!DIR$ ivdep
-#endif
-      do i=1,nnfft3d
-         A(i) = tmp2(int_mb(h_iq_to_i2(1,op,nb)+i-1))
-      end do
-
-
-      !*** deallocate memory ***
-      value =           MA_pop_stack(request(2))
-      if (.not. value)
-     > call errquit(' D3dB_t_transpose_ijk:popping stack',0,MA_ERR)
-
-      return
-      end
-
-
-
+   for (i=0; i<nnfft3d; ++i)
+	   A[i] = tmp2[h_iq_to_i2[op][i]];
+   free(request);
+   free(status);
+}
 
 
 
