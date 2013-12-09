@@ -3,7 +3,7 @@
 #include	<math.h>
 
 #include	"float.h"
-
+#include	"Parallel.h"
 
 /* define other routines */
 extern void get_cube(int itype, REAL unit, REAL *volume, REAL *unita, REAL *unitg);
