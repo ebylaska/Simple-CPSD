@@ -57,7 +57,7 @@ static int zplane_size;
 static int mapping, mapping2d;
 
 /* slab mapping */
-static int *q_map, *p_map, *k_map, *nqarray;
+static int *q_map, *p_map, *k_map;
 static int *i1_start, *i2_start, *iq_to_i1, *iq_to_i2;
 
 /* hilbert/h-curve mapping */
