@@ -1047,7 +1047,7 @@ static void d3db_t_transpose_ijk(int op, REAL A[], REAL tmp1[], REAL tmp2[])
          printf("d3db_t_transpose_ijk error: MPI_Waitall failed\n");
 
    /* unpack A(i) array */
-   if ((op==4)||(op==6)) nnfft3d = (n)/2+1)*nq1;
+   if ((op==4)||(op==6)) nnfft3d = (nx/2+1)*nq1;
    if ((op==1)||(op==3)) nnfft3d = (ny)    *nq2;
    if ((op==2)||(op==5)) nnfft3d = (nz)    *nq3;
 
