@@ -135,11 +135,6 @@ main()
    lwork = 4*ne[0];
    work = (REAL *) malloc(lwork*sizeof(REAL));
 
-   //cpsdlwork = 2*(nfft*nfft+10) + 40*nfft;
-   cpsdlwork  = (6+ispin)*n2ft3d;
-   cpsdlwork += nion*(5*nfft+3);
-   cpsdlwork += 7*ne[0]*ne[0];
-   cpsdwork = (REAL *) malloc(cpsdlwork*sizeof(REAL));
 
    nn = (ne[0]+ne[1])*n2ft3d;
    fread(c2,sizeof(REAL),nn,fp);
@@ -316,6 +311,13 @@ main()
       rcell[l+nsh+nsh] = i1*unita[2]+i2*unita[5]+i3*unita[8];
       ++l;
    }
+
+
+   //cpsdlwork = 2*(nfft*nfft+10) + 40*nfft;
+   cpsdlwork  = (6+ispin)*n2ft3d;
+   cpsdlwork += nion*(5*nfft+3);
+   cpsdlwork += 7*ne[0]*ne[0];
+   cpsdwork = (REAL *) malloc(cpsdlwork*sizeof(REAL));
 
 
   /* geometrical center of the cluster and center of mass */

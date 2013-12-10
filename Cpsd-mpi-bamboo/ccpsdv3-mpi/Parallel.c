@@ -43,3 +43,12 @@ void Parallel_rbcast(int psend, int sz, REAL *value)
       printf("Parallel_rbcast error: MPI_Bcast failed\n");
 }
 
+
+REAL Parallel_SumAll(REAL value_in)
+{
+   REAL value_out=0.0;
+   if (MPI_Allreduce(&value_in,&value_out,1,MPI_REAL_PRECISION,MPI_SUM,MPI_COMM_WORLD)!=MPI_SUCCESS)
+      printf("Parallel_SumAll error: MPI_Allreduce failed\n");
+
+   return value_out;
+}

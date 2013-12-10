@@ -19,5 +19,6 @@ extern void Parallel_end();
 extern void Parallel_ibcast(int, int, int*);
 extern void Parallel_rbcast(int, int, REAL*);
 
+REAL Parallel_SumAll(REAL);
 
 #endif /* PARALLEL_H_ */

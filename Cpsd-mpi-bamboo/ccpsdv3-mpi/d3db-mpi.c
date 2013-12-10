@@ -318,7 +318,7 @@ void d3db_ijktoindexp(int i, int j, int k,
    /**** slab mapping ***/
    if (mapping==1)
    {
-      q = q_map[k];
+      q  = q_map[k];
       *p = p_map[k];
       *indx = i + j*(nx/2+1) + q*(nx/2+1)*ny;
    }
@@ -326,7 +326,7 @@ void d3db_ijktoindexp(int i, int j, int k,
    /**** Hilbert mapping ****/
    else
    {
-      q = q_map3[i+j*(nx/2+1)];
+      q  = q_map3[i+j*(nx/2+1)];
       *p = p_map3[i+j*(nx/2+1)];
       *indx = k + q*nz;
    }
@@ -1145,15 +1145,12 @@ void d3db_init(int nx_in, int ny_in, int nz_in, int map_in)
       mapping = 2;
       mapping2d=2;
    }
-   printf("fera\n");
    mapping_init();
    if (mapping==1) d3db_c_transpose_jk_init();
    if (mapping==2) d3db_c_transpose_ijk_init();
-   printf("ferb\n");
 
    //d3db_c_timereverse_init();
    d3db_fft_init();
-   printf("ferc\n");
 }
 
 
@@ -1308,4 +1305,446 @@ d$PP""?-,"?$$,?$h`$$,,$$'$F44"
            .ccu?m?e?JC,-,"=?
                      """=='?"
 */
+
+
+
+/***********************************
+ *					               *
+ *	         d3db_cc_dot  	       *
+ *					               *
+ ***********************************
+
+*/
+REAL d3db_cc_dot(REAL A[], REAL B[])
+{
+    int i,j,k,q,index,p;
+    int np = Parallel_np();
+    int taskid = Parallel_taskid();
+    REAL sum = 0.0;
+
+   /**** slab mapping ****/
+   if (mapping==1)
+   {
+      /* kx!=0 plane, so double count */
+	  for (q=0; q<nq; ++q)
+      for (j=0; j<ny; ++j)
+	  for (i=1; i<(nx/2+1); ++i)
+	  {
+		  index = q*(nx/2+1)*ny + j*(nx/2+1) + i;
+		  sum += A[2*index]*B[2*index] + A[2*index+1]*B[2*index+1];
+	  }
+	  sum *= 2;
+
+      /* kx==0 plane, so single count */
+	  for (q=0; q<nq; ++q)
+	  for (j=0; j<ny; ++j)
+	  {
+		 index = q*(nx/2+1)*ny + j*(nx/2+1);
+		 sum += A[2*index]*B[2*index] + A[2*index+1]*B[2*index+1];
+	  }
+   }
+
+   /* hilbert mapping */
+   else
+   {
+      /* kx!=0 plane, so double count */
+	  for (index=0; index<nfft3d_map; ++index)
+	  {
+		  sum += A[2*index]*B[2*index] + A[2*index+1]*B[2*index+1];
+	  }
+	  sum *= 2;
+
+      /* kx==0 plane, so single count */
+	  i = 0;
+	  for (k=0; k<nz; ++k)
+	  for (j=0; j<ny; ++j)
+	  {
+		  i = 0;
+		  d3db_ijktoindexp(i,j,k,&index,&p);
+		  if (p==taskid)
+			  sum -= (A[2*index]*B[2*index]+A[2*index+1]*B[2*index+1]);
+	  }
+   }
+
+   /* add up sums from other nodes */
+   if (np>1)
+      sum = Parallel_SumAll(sum);
+
+   return sum;
+}
+
+/***********************************
+ *					               *
+ *	         d3db_cc_idot  	       *
+ *					               *
+ ***********************************
+
+*/
+REAL d3db_cc_idot(REAL A[], REAL B[])
+{
+    int i,j,k,q,index,p;
+    int np = Parallel_np();
+    int taskid = Parallel_taskid();
+    REAL sum = 0.0;
+
+   /**** slab mapping ****/
+   if (mapping==1)
+   {
+      /* kx!=0 plane, so double count */
+	  for (q=0; q<nq; ++q)
+      for (j=0; j<ny; ++j)
+	  for (i=1; i<(nx/2+1); ++i)
+	  {
+		  index = q*(nx/2+1)*ny + j*(nx/2+1) + i;
+		  sum += A[2*index]*B[2*index] + A[2*index+1]*B[2*index+1];
+	  }
+	  sum *= 2;
+
+      /* kx==0 plane, so single count */
+	  for (q=0; q<nq; ++q)
+	  for (j=0; j<ny; ++j)
+	  {
+		 index = q*(nx/2+1)*ny + j*(nx/2+1);
+		 sum += A[2*index]*B[2*index] + A[2*index+1]*B[2*index+1];
+	  }
+   }
+
+   /* hilbert mapping */
+   else
+   {
+      /* kx!=0 plane, so double count */
+	  for (index=0; index<nfft3d_map; ++index)
+	  {
+		  sum += A[2*index]*B[2*index] + A[2*index+1]*B[2*index+1];
+	  }
+	  sum *= 2;
+
+      /* kx==0 plane, so single count */
+	  i = 0;
+	  for (k=0; k<nz; ++k)
+	  for (j=0; j<ny; ++j)
+	  {
+		  i = 0;
+		  d3db_ijktoindexp(i,j,k,&index,&p);
+		  if (p==taskid)
+			  sum -= (A[2*index]*B[2*index]+A[2*index+1]*B[2*index+1]);
+	  }
+   }
+
+   return sum;
+}
+
+
+/***********************************
+ *					               *
+ *	         d3db_tt_dot  	       *
+ *					               *
+ ***********************************
+
+*/
+REAL d3db_tt_dot(REAL A[], REAL B[])
+{
+    int i,j,k,q,index,p;
+    int np = Parallel_np();
+    int taskid = Parallel_taskid();
+    REAL sum = 0.0;
+
+   /**** slab mapping ****/
+   if (mapping==1)
+   {
+      /* kx!=0 plane, so double count */
+	  for (q=0; q<nq; ++q)
+      for (j=0; j<ny; ++j)
+	  for (i=1; i<(nx/2+1); ++i)
+	  {
+		  index = q*(nx/2+1)*ny + j*(nx/2+1) + i;
+		  sum += A[index]*B[index];
+	  }
+	  sum *= 2;
+
+      /* kx==0 plane, so single count */
+	  for (q=0; q<nq; ++q)
+	  for (j=0; j<ny; ++j)
+	  {
+		 index = q*(nx/2+1)*ny + j*(nx/2+1);
+		 sum += A[index]*B[index];
+	  }
+   }
+
+   /* hilbert mapping */
+   else
+   {
+      /* kx!=0 plane, so double count */
+	  for (index=0; index<nfft3d_map; ++index)
+	  {
+		  sum += A[index]*B[index];
+	  }
+	  sum *= 2;
+
+      /* kx==0 plane, so single count */
+	  i = 0;
+	  for (k=0; k<nz; ++k)
+	  for (j=0; j<ny; ++j)
+	  {
+		  i = 0;
+		  d3db_ijktoindexp(i,j,k,&index,&p);
+		  if (p==taskid)
+			  sum -= (A[index]*B[index]);
+	  }
+   }
+
+   /**** add up sums from other nodes ****/
+   if (np>1)
+	   sum = Parallel_SumAll(sum);
+
+   return sum;
+}
+
+
+
+/***********************************
+ *					               *
+ *	         d3db_tt_idot  	       *
+ *					               *
+ ***********************************
+
+*/
+REAL d3db_tt_idot(REAL A[], REAL B[])
+{
+    int i,j,k,q,index,p;
+    int np = Parallel_np();
+    int taskid = Parallel_taskid();
+    REAL sum = 0.0;
+
+   /**** slab mapping ****/
+   if (mapping==1)
+   {
+      /* kx!=0 plane, so double count */
+	  for (q=0; q<nq; ++q)
+      for (j=0; j<ny; ++j)
+	  for (i=1; i<(nx/2+1); ++i)
+	  {
+		  index = q*(nx/2+1)*ny + j*(nx/2+1) + i;
+		  sum += A[index]*B[index];
+	  }
+	  sum *= 2;
+
+      /* kx==0 plane, so single count */
+	  for (q=0; q<nq; ++q)
+	  for (j=0; j<ny; ++j)
+	  {
+		 index = q*(nx/2+1)*ny + j*(nx/2+1);
+		 sum += A[index]*B[index];
+	  }
+   }
+
+   /* hilbert mapping */
+   else
+   {
+      /* kx!=0 plane, so double count */
+	  for (index=0; index<nfft3d_map; ++index)
+	  {
+		  sum += A[index]*B[index];
+	  }
+	  sum *= 2;
+
+      /* kx==0 plane, so single count */
+	  i = 0;
+	  for (k=0; k<nz; ++k)
+	  for (j=0; j<ny; ++j)
+	  {
+		  i = 0;
+		  d3db_ijktoindexp(i,j,k,&index,&p);
+		  if (p==taskid)
+			  sum -= (A[index]*B[index]);
+	  }
+   }
+
+   return sum;
+}
+
+
+/***********************************
+ *					               *
+ *	         d3db_c_read  	       *
+ *					               *
+ ***********************************
+
+*/
+void d3db_c_read(FILE *fp, REAL A[], REAL tmp[], REAL tmp2[])
+{
+   int j,k,q,p_to,p_here;
+   int taskid = Parallel_taskid();
+   int np     = Parallel_np();
+   int one = 1;
+   int nn = (nx+2)*ny;
+   int n  = (nx+2);
+   int msgtype = 89;
+
+   if (mapping==1)
+   {
+      /**** master node reads from file and distributes */
+      if (taskid==0)
+      {
+         for (k=0; k<nz; ++k)
+         {
+        	 fread(tmp,sizeof(REAL),nn,fp);
+        	 d3db_ktoqp(k,&q,&p_to);
+             if (p_to==0)
+                ecopy(&nn,tmp,&one,&A[q*nn],&one);
+             else
+                if (MPI_Send(tmp,nn,MPI_REAL_PRECISION,
+            			      p_to,msgtype,MPI_COMM_WORLD)!=MPI_SUCCESS)
+            		 printf("d3db_c_read error: MPI_Send failed\n");
+         }
+      }
+      else
+      {
+    	  for (k=0; k<nz; ++k)
+    	  {
+    	     d3db_ktoqp(k,&q,&p_here);
+    	     if (p_here==taskid)
+                if (MPI_Recv(&A[q*nn],nn,MPI_REAL_PRECISION,0,msgtype,MPI_COMM_WORLD,MPI_STATUS_IGNORE)!=MPI_SUCCESS)
+                   printf("d3db_c_read error: MPI_Recv failed\n");
+    	  }
+      }
+   }
+
+   /* hilbert mapping */
+   else
+   {
+      if (taskid==0)
+      {
+	     for (k=0; k<nz; ++k)
+         for (j=0; j<ny; ++j)
+         {
+            fread(tmp,sizeof(REAL),n,fp);
+            q    = q_map1[j+k*ny];
+            p_to = p_map1[j+k*ny];
+            if (p_to==0)
+               ecopy(&n,tmp,&one,&A[q*n],&one);
+            else
+               if (MPI_Send(tmp,n,MPI_REAL_PRECISION,
+            		     p_to,msgtype,MPI_COMM_WORLD)!=MPI_SUCCESS)
+                  printf("d3db_c_read error: MPI_Send failed\n");
+         }
+      }
+      else
+      {
+    	 for (k=0; k<nz; ++k)
+         for (j=0; j<ny; ++j)
+         {
+             q      = q_map1[j+k*ny];
+             p_here = p_map1[j+k*ny];
+             if (p_here==taskid)
+                if (MPI_Recv(&A[q*n],n,MPI_REAL_PRECISION,0,msgtype,MPI_COMM_WORLD,MPI_STATUS_IGNORE)!=MPI_SUCCESS)
+                   printf("d3db_c_read error: MPI_Recv failed\n");
+      	  }
+      }
+      d3db_c_transpose_ijk(5,A,tmp,tmp2);
+   }
+
+}
+
+
+
+/***********************************
+ *					               *
+ *	         d3db_c_write  	       *
+ *					               *
+ ***********************************
+
+*/
+void d3db_c_write(FILE *fp, REAL A[], REAL tmp[], REAL tmp2[])
+{
+   int j,k,q,p_here,p_from,idum;
+   int taskid = Parallel_taskid();
+   int np     = Parallel_np();
+   int one = 1;
+   int nn = (nx+2)*ny;
+   int n  = (nx+2);
+   int msgtype     = 89;
+   int msgtype_dum = 87;
+
+   if (mapping==1)
+   {
+      /**** master node write to file */
+      if (taskid==0)
+      {
+         for (k=0; k<nz; ++k)
+         {
+        	 d3db_ktoqp(k,&q,&p_from);
+             if (p_from==0)
+                ecopy(&nn,&A[q*nn],&one,tmp,&one);
+             else
+             {
+                if (MPI_Send(&idum,1,MPI_INTEGER,
+            			      p_from,msgtype_dum,MPI_COMM_WORLD)!=MPI_SUCCESS)
+            		 printf("d3db_c_write error: MPI_Send failed\n");
+                if (MPI_Recv(tmp,nn,MPI_REAL_PRECISION,p_from,msgtype,MPI_COMM_WORLD,MPI_STATUS_IGNORE)!=MPI_SUCCESS)
+                   printf("d3db_c_read error: MPI_Recv failed\n");
+             }
+             fwrite(tmp,sizeof(REAL),nn,fp);
+         }
+      }
+      else
+      {
+    	  for (k=0; k<nz; ++k)
+    	  {
+    	     d3db_ktoqp(k,&q,&p_here);
+    	     if (p_here==taskid)
+    	     {
+                if (MPI_Recv(&idum,1,MPI_INTEGER,0,msgtype_dum,MPI_COMM_WORLD,MPI_STATUS_IGNORE)!=MPI_SUCCESS)
+                   printf("d3db_c_write error: MPI_Recv failed\n");
+                if (MPI_Send(&A[q*nn],nn,MPI_REAL_PRECISION,0,msgtype,MPI_COMM_WORLD)!=MPI_SUCCESS)
+                   printf("d3db_c_write error: MPI_Send failed\n");
+    	     }
+    	  }
+      }
+   }
+
+   /* hilbert mapping */
+   else
+   {
+      d3db_c_transpose_ijk(6,A,tmp,tmp2);
+
+      if (taskid==0)
+      {
+    	 for (k=0; k<nz; ++k)
+         for (j=0; j<ny; ++j)
+         {
+            q      = q_map1[j+k*ny];
+            p_from = p_map1[j+k*ny];
+            if (p_from==0)
+            	ecopy(&n,&A[q*n],&one,tmp,&one);
+            else
+            {
+                if (MPI_Send(&idum,1,MPI_INTEGER,
+            			      p_from,msgtype_dum,MPI_COMM_WORLD)!=MPI_SUCCESS)
+            		 printf("d3db_c_write error: MPI_Send failed\n");
+                if (MPI_Recv(tmp,n,MPI_REAL_PRECISION,p_from,msgtype,MPI_COMM_WORLD,MPI_STATUS_IGNORE)!=MPI_SUCCESS)
+                   printf("d3db_c_read error: MPI_Recv failed\n");
+             }
+             fwrite(tmp,sizeof(REAL),n,fp);
+         }
+      }
+
+      else
+      {
+     	 for (k=0; k<nz; ++k)
+         for (j=0; j<ny; ++j)
+         {
+            q      = q_map1[j+k*ny];
+            p_here = p_map1[j+k*ny];
+            if (p_here==taskid)
+            {
+                if (MPI_Recv(&idum,1,MPI_INTEGER,0,msgtype_dum,MPI_COMM_WORLD,MPI_STATUS_IGNORE)!=MPI_SUCCESS)
+                   printf("d3db_c_write error: MPI_Recv failed\n");
+                if (MPI_Send(&A[q*n],n,MPI_REAL_PRECISION,0,msgtype,MPI_COMM_WORLD)!=MPI_SUCCESS)
+                   printf("d3db_c_write error: MPI_Send failed\n");
+            }
+         }
+      }
+   }
+}
 

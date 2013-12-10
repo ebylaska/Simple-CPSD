@@ -105,41 +105,21 @@ main(int argc, char *argv[])
 
    if (oprint)
    {
-   printf("          ****************************************************\n");
-   printf("          *                                                  *\n");
-   printf("          *     Car-Parrinello microcluster calculation      *\n");
-   printf("          *                                                  *\n");
-   printf("          *         [ steepest descent minimization ]        *\n");
-   printf("          *         [      ");
-   printf(REALTYPE);
-   printf("         ]        *\n");
-   printf("          *                                                  *\n");
-   printf("          *         [   parallel MPI implementation ]        *\n");
-   printf("          *            version #3.00   12/05/2013            *\n");
-   printf("          *                                                  *\n");
-   printf("          ****************************************************\n");
-   message(1);
+      printf("          ****************************************************\n");
+      printf("          *                                                  *\n");
+      printf("          *     Car-Parrinello microcluster calculation      *\n");
+      printf("          *                                                  *\n");
+      printf("          *         [ steepest descent minimization ]        *\n");
+      printf("          *         [      ");
+      printf(REALTYPE);
+      printf("         ]        *\n");
+      printf("          *                                                  *\n");
+      printf("          *         [   parallel MPI implementation ]        *\n");
+      printf("          *            version #3.00   12/05/2013            *\n");
+      printf("          *                                                  *\n");
+      printf("          ****************************************************\n");
+      message(1);
    }
-
-   /* read in aimd.param */
-   if (Parallel_taskid()==0)
-   {
-      fp = fopen("aimd.param","r");
-      fscanf(fp,"%d",&icube);
-      fscanf(fp,FMT1,&unit);
-      fscanf(fp,"%d",&nfft);
-      fscanf(fp,"%d %d %d",&ispin,&(ne[0]),&(ne[1]));
-      fscanf(fp,"%d %d",&nkatm,&nion);
-      fscanf(fp,"%d",&mapping);
-      fclose(fp);
-   }
-   Parallel_ibcast(0,1,&icube);
-   Parallel_ibcast(0,1,&nfft);
-   Parallel_rbcast(0,1,&unit);
-   Parallel_ibcast(0,1,&ispin);
-   Parallel_ibcast(0,2,ne);
-   Parallel_ibcast(0,1,&mapping);
-   printf(" 1 nfft=%d mapping=%d\n",nfft,mapping);
 
    /* read parameters and flags */
    if (Parallel_taskid()==0)
@@ -154,6 +134,8 @@ main(int argc, char *argv[])
       fscanf(fp,FMT1,&tole);
       fscanf(fp,FMT1,&tolc);
       fscanf(fp,FMT1,&tolr);
+      if (fscanf(fp,"%d",&mapping)==EOF) 
+         mapping = 1;
       fclose(fp);
    }
    Parallel_ibcast(0,1,&ispin);
@@ -166,22 +148,28 @@ main(int argc, char *argv[])
    Parallel_rbcast(0,1,&tole);
    Parallel_rbcast(0,1,&tolc);
    Parallel_rbcast(0,1,&tolr);
-   printf("nfft=%d mapping=%d\n",nfft,mapping);
+   Parallel_ibcast(0,1,&mapping);
 
+   /* read in ELCIN header */
+   if (Parallel_taskid()==0)
+   {
+      fp = fopen("ELCIN","rb");
+      fread(&icube,sizeof(int),1,fp);
+      fread(&nfft,sizeof(int),1,fp);
+      fread(&unit,sizeof(REAL),1,fp);
+      fread(&ispin,sizeof(int),1,fp);
+      fread(ne,sizeof(int),2,fp);
+   }
+   Parallel_ibcast(0,1,&icube);
+   Parallel_ibcast(0,1,&nfft);
+   Parallel_rbcast(0,1,&unit);
+   Parallel_ibcast(0,1,&ispin);
+   Parallel_ibcast(0,2,ne);
 
+   /* initialize d3db */
    d3db_init(nfft,nfft,nfft,mapping);
    nfft3d = d3db_nfft3d();
    n2ft3d = d3db_n2ft3d();
-   printf("nfft3d=%d n2ft3d=%d nfft=%d\n",nfft3d,n2ft3d,nfft);
-
-
-   /* read in ELCIN header */
-   fp = fopen("ELCIN","rb");
-   fread(&icube,sizeof(int),1,fp);
-   fread(&nfft,sizeof(int),1,fp);
-   fread(&unit,sizeof(REAL),1,fp);
-   fread(&ispin,sizeof(int),1,fp);
-   fread(ne,sizeof(int),2,fp);
 
    /* allocate electronic data */
    //nfft3d = (nfft/2+1)*nfft*nfft;
@@ -198,10 +186,15 @@ main(int argc, char *argv[])
    lwork = 4*ne[0];
    work = (REAL *) malloc(lwork*sizeof(REAL));
 
+   for (i=0; i<(ne[0]+ne[1]); ++i)
+      d3db_c_read(fp,&c2[i*n2ft3d],c1,cpsi);
+
    nn = (ne[0]+ne[1])*n2ft3d;
-   fread(c2,sizeof(REAL),nn,fp);
+   //fread(c2,sizeof(REAL),nn,fp);
    ecopy(&nn,c2,&one,c1,&one);
-   fclose(fp);
+
+   if (Parallel_taskid()==0)
+      fclose(fp);
 
    /* define lattice */
    get_cube(icube,unit,&omega,unita,unitg);
@@ -258,59 +251,60 @@ main(int argc, char *argv[])
    for (k=0; k<nfft3d; ++k) tg[k] *= masker1[k];
    for (k=0; k<nfft3d; ++k) vc[k] *= masker1[k];
    for (k=0; k<nfft3d; ++k) vg[k] *= masker1[k];
-   
-
-   /* read parameters and flags */
-   //fp = fopen("CONTROL","r");
-   //  fscanf(fp,"%d %d", &ispin, &imove);
-   //  fscanf(fp,"%d", &icube);
-   //  fscanf(fp,FMT1,&unit);
-   //  fscanf(fp,FMT1,&dt);
-   //  fscanf(fp,FMT1,&fmass);
-   //  fscanf(fp,"%d %d", &inner, &outer);
-   //  fscanf(fp,FMT1,&tole);
-   //  fscanf(fp,FMT1,&tolc);
-   //  fscanf(fp,FMT1,&tolr);
-   //fclose(fp);
-
-   /* read in wavefunctions */
-
 
    /*  read ionic structure */
-   fp = fopen("IONIN","r");
-     fscanf(fp,"%d",&nkatm);
+   if (Parallel_taskid()==0)
+   {
+      fp = fopen("IONIN","r");
+      fscanf(fp,"%d",&nkatm);
+   }
+   Parallel_ibcast(0,1,&nkatm);
 
-     lmax   = (int *)   malloc(nkatm*sizeof(int));
-     lmmax  = (int *)   malloc(nkatm*sizeof(int));
-     natm   = (int *)   malloc(nkatm*sizeof(int));
-     fname  = (char **) malloc(nkatm*sizeof(char *));
-     atom   = (char **) malloc(nkatm*sizeof(char *));
-     
+   lmax   = (int *)   malloc(nkatm*sizeof(int));
+   lmmax  = (int *)   malloc(nkatm*sizeof(int));
+   natm   = (int *)   malloc(nkatm*sizeof(int));
+   fname  = (char **) malloc(nkatm*sizeof(char *));
+   atom   = (char **) malloc(nkatm*sizeof(char *));
+   for (ia=0; ia<nkatm; ++ia)
+   {
+      natm[ia]  = 0;
+      fname[ia] = (char *) malloc(8*sizeof(char));
+      atom[ia]  = (char *) malloc(2*sizeof(char));
+   }
+
+   if (Parallel_taskid()==0)
+   {
      for (ia=0; ia<nkatm; ++ia)
      {
-        natm[ia] = 0;
-        fname[ia] = (char *) malloc(8*sizeof(char));
-        atom[ia]  = (char *) malloc(2*sizeof(char));
         fscanf(fp,"%1s%s%1s %d",&tch1,fname[ia],&tch2,&lmax[ia]);
         lmmax[ia] = lmax[ia]*lmax[ia];
      }
      fscanf(fp,"%d",&nion);
+   }
+   Parallel_ibcast(0,nkatm,lmax);
+   Parallel_ibcast(0,nkatm,lmmax);
+   Parallel_ibcast(0,1,&nion);
 
-     katm = (int *)  malloc(nion*sizeof(int));
-     r2   = (REAL *) malloc(3*nion*sizeof(REAL));
-     r1   = (REAL *) malloc(3*nion*sizeof(REAL));
-     fion = (REAL *) malloc(3*nion*sizeof(REAL));
-    
-     for (ii=0; ii<nion; ++ii)
-     {
-        fscanf(fp,"%d",&katm[ii]); katm[ii] -= 1;
-        fscanf(fp,FMT1,&r2[0+ii*3]); fscanf(fp,FMT1,&r2[1+ii*3]); fscanf(fp,FMT1,&r2[2+ii*3]);
-        fscanf(fp,FMT1,&r1[0+ii*3]); fscanf(fp,FMT1,&r1[1+ii*3]); fscanf(fp,FMT1,&r1[2+ii*3]);
-        natm[katm[ii]] += 1;
-     }
-     nn = 3*nion;
-     ecopy(&nn,r2,&one,r1,&one);
-   fclose(fp);
+   katm = (int *)  malloc(nion*sizeof(int));
+   r2   = (REAL *) malloc(3*nion*sizeof(REAL));
+   r1   = (REAL *) malloc(3*nion*sizeof(REAL));
+   fion = (REAL *) malloc(3*nion*sizeof(REAL));
+
+   if (Parallel_taskid()==0)
+   {
+      for (ii=0; ii<nion; ++ii)
+      {
+         fscanf(fp,"%d",&katm[ii]); katm[ii] -= 1;
+         fscanf(fp,FMT1,&r2[0+ii*3]); fscanf(fp,FMT1,&r2[1+ii*3]); fscanf(fp,FMT1,&r2[2+ii*3]);
+         fscanf(fp,FMT1,&r1[0+ii*3]); fscanf(fp,FMT1,&r1[1+ii*3]); fscanf(fp,FMT1,&r1[2+ii*3]);
+         natm[katm[ii]] += 1;
+      }
+      fclose(fp);
+   }
+   Parallel_ibcast(0,nion,katm);
+   Parallel_rbcast(0,3*nion,r2);
+   nn = 3*nion;
+   ecopy(&nn,r2,&one,r1,&one);
 
    /* read pseudopotential */
    amass = (REAL *) malloc(nkatm*sizeof(REAL));
@@ -322,28 +316,41 @@ main(int argc, char *argv[])
    vnlnrm  = (REAL *) malloc(nkatm*9*sizeof(REAL));
    vl      = (REAL *) malloc(nkatm*nfft3d*sizeof(REAL));
    vnl     = (REAL *) malloc(nkatm*nfft3d*9*sizeof(REAL));
-    
+
    for (ia=0; ia<nkatm; ++ia)
    {
-      fp = fopen(fname[ia],"rb");
-       fread(&icube0,sizeof(int),1,fp);
-       fread(&nfft0,sizeof(int),1,fp);
-       fread(&unit0,sizeof(REAL),1,fp);
-       fread(atom[ia],sizeof(char),2,fp);
-       fread(&amass[ia],sizeof(REAL),1,fp);
-       amass[ia] *= 1822.89;
-       fread(&zv[ia],sizeof(REAL),1,fp);
+      if (Parallel_taskid()==0)
+      {
+         fp = fopen(fname[ia],"rb");
+         fread(&icube0,sizeof(int),1,fp);
+         fread(&nfft0,sizeof(int),1,fp);
+         fread(&unit0,sizeof(REAL),1,fp);
+         fread(atom[ia],sizeof(char),2,fp);
+         fread(&amass[ia],sizeof(REAL),1,fp);
+         amass[ia] *= 1822.89;
+         fread(&zv[ia],sizeof(REAL),1,fp);
 
-       fread(&lmax0,sizeof(int),1,fp);
-       if (lmax0!=lmax[ia])
-          printf("Error reading psp %d, lmax0=%d <> lmax=%d\n",ia,lmax0,lmax[ia]);
+         fread(&lmax0,sizeof(int),1,fp);
+         if (lmax0!=lmax[ia])
+            printf("Error reading psp %d, lmax0=%d <> lmax=%d\n",ia,lmax0,lmax[ia]);
 
-       fread(rc[ia],sizeof(REAL),lmax0+1,fp);
-       fread( &vnlnrm[ia*9],    sizeof(REAL),lmmax[ia],fp);
-       fread( &vl[ia*nfft3d],   sizeof(REAL),nfft3d,fp);
-       fread( &vnl[ia*nfft3d*9],sizeof(REAL),lmmax[ia]*nfft3d,fp);
-      fclose(fp);
+         fread(rc[ia],sizeof(REAL),lmax0+1,fp);
+         fread( &vnlnrm[ia*9],    sizeof(REAL),lmmax[ia],fp);
+      }
+      Parallel_ibcast(0,1,&icube0);
+      Parallel_ibcast(0,1,&nfft0);
+      Parallel_rbcast(0,1,&unit0);
+      Parallel_ibcast(0,1,&lmax0);
+      Parallel_rbcast(0,lmax0+1,rc[ia]);
+
+      fread( &vl[ia*nfft3d],   sizeof(REAL),nfft3d,fp);
+      fread( &vnl[ia*nfft3d*9],sizeof(REAL),lmmax[ia]*nfft3d,fp);
+      if (Parallel_taskid==0)
+         fclose(fp);
    }
+   Parallel_rbcast(0,nkatm,amass);
+   Parallel_rbcast(0,nkatm,zv);
+   Parallel_rbcast(0,nkatm*9,vnlnrm);
 
    /* Setup Ewald summation */
    rs=pow( (3.00*omega/fourpi),(1.00/3.00));
@@ -399,80 +406,83 @@ main(int argc, char *argv[])
    /* summary of input data */
    if (oprint)
    {
-   printf("          ================ input data ========================\n");
+      printf("          ================ input data ========================\n");
 
-   printf("\n number of processors used: %d\n", Parallel_np());
-   printf("\n options:\n");
-   if (imove)
-      printf("      ionic motion   = yes\n");
-   else
-      printf("      ionic motion   = no\n");
-   printf("      electron spin  = %d\n",ispin);
+      printf("\n number of processors used: %d\n", Parallel_np());
+      if (mapping==1) printf(" parallel mapping:             1d slab\n");
+      if (mapping==2) printf(" parallel mapping:          2d hilbert\n");
+      if (mapping==3) printf(" parallel mapping:           2d hcurve\n");
+       printf("\n options:\n");
+      if (imove)
+         printf("      ionic motion   = yes\n");
+      else
+         printf("      ionic motion   = no\n");
+      printf("      electron spin  = %d\n",ispin);
 
-   printf("\n elements involved in the cluster:\n");
-   for (ia=0; ia<nkatm; ++ia)
-   {
-      printf("   %2d : %s  mass no.: %6.1f   core charge %4.1f  lmax = %1d\n",
-             ia+1,atom[ia],(amass[ia]/1822.89),zv[ia],lmax[ia]);
-     printf("           cutoff = ");
-     for (l=0; l<=lmax[ia]; ++l) printf(FMT8p3,rc[ia][l]);
-     printf("\n");
-   }
+      printf("\n elements involved in the cluster:\n");
+      for (ia=0; ia<nkatm; ++ia)
+      {
+         printf("   %2d : %s  mass no.: %6.1f   core charge %4.1f  lmax = %1d\n",
+                ia+1,atom[ia],(amass[ia]/1822.89),zv[ia],lmax[ia]);
+         printf("           cutoff = ");
+         for (l=0; l<=lmax[ia]; ++l) printf(FMT8p3,rc[ia][l]);
+         printf("\n");
+      }
 
 
-   printf("\n atomic composition:\n");
-   for (ia=0; ia<nkatm; ++ia)
-     printf("     %s : %d",atom[ia],natm[ia]);
-   printf("\n");
-   printf("\n initial position of ions:\n");
-   for (ii=0; ii<nion; ++ii)
-   {
-       printf("     %4d %2s ( %11.5f %11.5f %11.5f )\n",
+      printf("\n atomic composition:\n");
+      for (ia=0; ia<nkatm; ++ia)
+        printf("     %s : %d",atom[ia],natm[ia]);
+      printf("\n");
+      printf("\n initial position of ions:\n");
+      for (ii=0; ii<nion; ++ii)
+      {
+          printf("     %4d %2s ( %11.5f %11.5f %11.5f )\n",
               ii+1,atom[katm[ii]],r2[3*ii],r2[1+3*ii],r2[2+3*ii]);
+      }
+      printf("        G.C. ( %11.5f %11.5f %11.5f )\n",gc[0],gc[1],gc[2]);
+      printf("       C.O.M.( %11.5f %11.5f %11.5f )\n",cm[0],cm[1],cm[2]);
+
+      printf("\n supercell:\n");
+      if (icube==1) printf("     lattice: simple cubic");
+      if (icube==2) printf("     lattice: face-centered cubic");
+      if (icube==3) printf("     lattice: body-centered cubic");
+      printf("   size="); printf(FMT8p3,unit);
+      printf(" volume="); printf(FMT10p1,omega);
+      printf("\n");
+      printf("                 ");
+      printf("a1 = < "); printf(FMT10,unita[0],unita[1],unita[2]); printf(" >\n");
+      printf("                 ");
+      printf("a2 = < "); printf(FMT10,unita[3],unita[4],unita[5]); printf(" >\n");
+      printf("                 ");
+      printf("a3 = < "); printf(FMT10,unita[6],unita[7],unita[8]); printf(" >\n");
+      printf("     reciprocal: ");
+      printf("b1 = < "); printf(FMT10,unitg[0],unitg[1],unitg[2]); printf(" >\n");
+      printf("                 ");
+      printf("b2 = < "); printf(FMT10,unitg[3],unitg[4],unitg[5]); printf(" >\n");
+      printf("                 ");
+      printf("b3 = < "); printf(FMT10,unitg[6],unitg[7],unitg[8]); printf(" >\n");
+      printf("     cutoff=");printf(FMT8p3,ecut);
+      printf("  fft=%4d x %4d x %4d (%8d waves)\n",nfft,nfft,nfft,nfft3d);
+      printf("     Ewald summation: cut radius=");printf(FMT8p3,rcut);
+      printf("  and %3d\n",ncut);
+      printf("\n");
+
+      printf("\n technical parameters:\n");
+      printf("      iterations = %d (inner = %d, outer = %d)\n",inner*outer,inner,outer);
+      printf("      time step  =");printf(FMT8p3,dt);
+      printf("      fictitious mass=");printf(FMT10p1,fmass);
+      printf("\n");
+      printf("      tolerances =");
+      printf(FMTE8p3,tole); printf(" (energy)");
+      printf(FMTE12p3,tolc); printf(" (electron)");
+      printf(FMTE12p3,tolr); printf(" (ion)\n");
+      printf("\n\n");
+      printf("          ================ iteration =========================\n");
+      message(2);
    }
-   printf("        G.C. ( %11.5f %11.5f %11.5f )\n",gc[0],gc[1],gc[2]);
-   printf("       C.O.M.( %11.5f %11.5f %11.5f )\n",cm[0],cm[1],cm[2]);
 
-   printf("\n supercell:\n");
-   if (icube==1) printf("     lattice: simple cubic");
-   if (icube==2) printf("     lattice: face-centered cubic");
-   if (icube==3) printf("     lattice: body-centered cubic");
-   printf("   size="); printf(FMT8p3,unit);
-   printf(" volume="); printf(FMT10p1,omega);
-   printf("\n");
-   printf("                 ");
-   printf("a1 = < "); printf(FMT10,unita[0],unita[1],unita[2]); printf(" >\n");
-   printf("                 ");
-   printf("a2 = < "); printf(FMT10,unita[3],unita[4],unita[5]); printf(" >\n");
-   printf("                 ");
-   printf("a3 = < "); printf(FMT10,unita[6],unita[7],unita[8]); printf(" >\n");
-   printf("     reciprocal: ");
-   printf("b1 = < "); printf(FMT10,unitg[0],unitg[1],unitg[2]); printf(" >\n");
-   printf("                 ");
-   printf("b2 = < "); printf(FMT10,unitg[3],unitg[4],unitg[5]); printf(" >\n");
-   printf("                 ");
-   printf("b3 = < "); printf(FMT10,unitg[6],unitg[7],unitg[8]); printf(" >\n");
-   printf("     cutoff=");printf(FMT8p3,ecut);
-   printf("  fft=%4d x %4d x %4d (%8d waves)\n",nfft,nfft,nfft,nfft3d);
-   printf("     ewald sumation: cut radius=");printf(FMT8p3,rcut);
-   printf("  and %3d\n",ncut);
-   printf("\n");
-
-   printf("\n technical parameters:\n");
-   printf("      iterations = %d (inner = %d, outer = %d)\n",inner*outer,inner,outer);
-   printf("      time step  =");printf(FMT8p3,dt);
-   printf("      ficticious mass=");printf(FMT10p1,fmass);
-   printf("\n");
-   printf("      tolerances =");
-   printf(FMTE8p3,tole); printf(" (energy)");
-   printf(FMTE12p3,tolc); printf(" (electron)");
-   printf(FMTE12p3,tolr); printf(" (ion)\n");
-   printf("\n\n");
-   printf("          ================ iteration =========================\n");
-   }
-
-/*****************************|  begin ieration |****************************/
-   message(2);
+/*****************************|  begin iteration |****************************/
    cpu2 = current_second();
    done = 0;
    icount=0;
@@ -493,12 +503,12 @@ main(int argc, char *argv[])
 
       if (oprint)
       {
-      printf("%8d",inner*icount);
-      printf(FMTE20p10,E[0]);
-      printf(FMTE13p5,deltae);
-      printf(FMTE13p5,deltac);
-      printf(FMTE13p5,deltar);
-      printf("\n");
+         printf("%8d",inner*icount);
+         printf(FMTE20p10,E[0]);
+         printf(FMTE13p5,deltae);
+         printf(FMTE13p5,deltac);
+         printf(FMTE13p5,deltar);
+         printf("\n");
       }
       if ((fabs(deltae)< tole) && (deltac < tolc) && (deltar < tolr))
       {
@@ -527,7 +537,8 @@ main(int argc, char *argv[])
    for (i=n1[ms]; i<=n2[ms]; ++i)
    for (j=i;      j<=n2[ms]; ++j)
    {
-      w = gcdotc(nfft,&c1[i*n2ft3d],&c1[j*n2ft3d]);
+      //w = gcdotc(nfft,&c1[i*n2ft3d],&c1[j*n2ft3d]);
+      w = d3db_cc_dot(&c1[i*n2ft3d],&c1[j*n2ft3d]);
       if (oprint) {printf("%3d %3d %3d",ms+1,i-n1[ms]+1,j-n1[ms]+1);printf(FMTE18p7,w);printf("\n");}
    }
 
@@ -568,76 +579,85 @@ main(int argc, char *argv[])
 
    if (oprint)
    {
-   printf("\n\n          ================ summary of results ================\n");
-   printf("\n final position of ions:\n");
-   for (ii=0; ii<nion; ++ii)
-   {
-       printf("     %4d %2s ( %11.5f %11.5f %11.5f )\n",
+      printf("\n\n          ================ summary of results ================\n");
+      printf("\n final position of ions:\n");
+      for (ii=0; ii<nion; ++ii)
+      {
+          printf("     %4d %2s ( %11.5f %11.5f %11.5f )\n",
               ii+1,atom[katm[ii]],r2[3*ii],r2[1+3*ii],r2[2+3*ii]);
-   }
-   printf("        G.C. ( %11.5f %11.5f %11.5f )\n",gc[0],gc[1],gc[2]);
-   printf("       C.O.M.( %11.5f %11.5f %11.5f )\n",cm[0],cm[1],cm[2]);
+      }
+      printf("        G.C. ( %11.5f %11.5f %11.5f )\n",gc[0],gc[1],gc[2]);
+      printf("       C.O.M.( %11.5f %11.5f %11.5f )\n",cm[0],cm[1],cm[2]);
 
-   printf("\n total     energy    :"); printf(FMTE19p10,E[0]); printf(" (");printf(FMTE15p5,E[0]/nion); printf("/ion)\n");
-   printf(" total orbital energy:"); printf(FMTE19p10,E[1]); printf(" (");printf(FMTE15p5,E[1]/(ne[0]+ne[1])); printf("/electron)\n");
-   printf(" hartree   energy    :"); printf(FMTE19p10,E[2]); printf(" (");printf(FMTE15p5,E[2]/(ne[0]+ne[1])); printf("/electron)\n");
-   printf(" exc-corr  energy    :"); printf(FMTE19p10,E[3]); printf(" (");printf(FMTE15p5,E[3]/(ne[0]+ne[1])); printf("/electron)\n");
-   printf(" ion-ion   energy    :"); printf(FMTE19p10,E[4]); printf(" (");printf(FMTE15p5,E[4]/nion); printf("/ion)\n");
+      printf("\n total     energy    :"); printf(FMTE19p10,E[0]); printf(" (");printf(FMTE15p5,E[0]/nion); printf("/ion)\n");
+      printf(" total orbital energy:"); printf(FMTE19p10,E[1]); printf(" (");printf(FMTE15p5,E[1]/(ne[0]+ne[1])); printf("/electron)\n");
+      printf(" hartree   energy    :"); printf(FMTE19p10,E[2]); printf(" (");printf(FMTE15p5,E[2]/(ne[0]+ne[1])); printf("/electron)\n");
+      printf(" exc-corr  energy    :"); printf(FMTE19p10,E[3]); printf(" (");printf(FMTE15p5,E[3]/(ne[0]+ne[1])); printf("/electron)\n");
+      printf(" ion-ion   energy    :"); printf(FMTE19p10,E[4]); printf(" (");printf(FMTE15p5,E[4]/nion); printf("/ion)\n");
 
-   printf("\n KS kinetic energy   :"); printf(FMTE19p10,E[5]); printf(" (");printf(FMTE15p5,E[5]/(ne[0]+ne[1])); printf("/electron)\n");
-   printf(" KS V_l energy       :"); printf(FMTE19p10,E[6]); printf(" (");printf(FMTE15p5,E[6]/(ne[0]+ne[1])); printf("/electron)\n");
-   printf(" KS V_nl energy      :"); printf(FMTE19p10,E[7]); printf(" (");printf(FMTE15p5,E[7]/(ne[0]+ne[1])); printf("/electron)\n");
-   printf(" KS V_Hart energy    :"); printf(FMTE19p10,E[8]); printf(" (");printf(FMTE15p5,E[8]/(ne[0]+ne[1])); printf("/electron)\n");
-   printf(" KS V_xc energy      :"); printf(FMTE19p10,E[9]); printf(" (");printf(FMTE15p5,E[9]/(ne[0]+ne[1])); printf("/electron)\n");
-   printf(" Virial Ratio <V>/<T>:"); printf(FMTE19p10,-99.0); printf("\n");
+      printf("\n KS kinetic energy   :"); printf(FMTE19p10,E[5]); printf(" (");printf(FMTE15p5,E[5]/(ne[0]+ne[1])); printf("/electron)\n");
+      printf(" KS V_l energy       :"); printf(FMTE19p10,E[6]); printf(" (");printf(FMTE15p5,E[6]/(ne[0]+ne[1])); printf("/electron)\n");
+      printf(" KS V_nl energy      :"); printf(FMTE19p10,E[7]); printf(" (");printf(FMTE15p5,E[7]/(ne[0]+ne[1])); printf("/electron)\n");
+      printf(" KS V_Hart energy    :"); printf(FMTE19p10,E[8]); printf(" (");printf(FMTE15p5,E[8]/(ne[0]+ne[1])); printf("/electron)\n");
+      printf(" KS V_xc energy      :"); printf(FMTE19p10,E[9]); printf(" (");printf(FMTE15p5,E[9]/(ne[0]+ne[1])); printf("/electron)\n");
+      printf(" Virial Ratio <V>/<T>:"); printf(FMTE19p10,-99.0); printf("\n");
 
-   printf("\n orbital energies:\n");
-   nn = ne[0] - ne[1];
-   ev = 27.2116;
-   for (i=0; i<nn; ++i)
-   {
-      printf(FMTE18p7,eig[i]); printf(" ("); printf(FMT8p3,eig[i]*ev); printf("eV)\n");
+      printf("\n orbital energies:\n");
+      nn = ne[0] - ne[1];
+      ev = 27.2116;
+      for (i=0; i<nn; ++i)
+      {
+         printf(FMTE18p7,eig[i]); printf(" ("); printf(FMT8p3,eig[i]*ev); printf("eV)\n");
+      }
+      for (i=0; i<ne[1]; ++i)
+      {
+         printf(FMTE18p7,eig[i+nn]); printf(" ("); printf(FMT8p3,eig[i+nn]*ev); printf("eV) ");
+         printf(FMTE18p7,eig[i+(ispin-1)*ne[0]]); printf(" ("); printf(FMT8p3,eig[i+(ispin-1)*ne[0]]*ev); printf("eV)\n");
+      }
    }
-   for (i=0; i<ne[1]; ++i)
-   {
-      printf(FMTE18p7,eig[i+nn]); printf(" ("); printf(FMT8p3,eig[i+nn]*ev); printf("eV) ");
-      printf(FMTE18p7,eig[i+(ispin-1)*ne[0]]); printf(" ("); printf(FMT8p3,eig[i+(ispin-1)*ne[0]]*ev); printf("eV)\n");
-   }
-   }
-     
+
    /* writeout  ELCOUT */
-   fp = fopen("ELCOUT","wb");
-     fwrite(&icube,sizeof(int),1,fp);
-     fwrite(&nfft,sizeof(int),1,fp);
-     fwrite(&unit,sizeof(REAL),1,fp);
-     fwrite(&ispin,sizeof(int),1,fp);
-     fwrite(ne,sizeof(int),2,fp);
-     nn = (ne[0]+ne[1])*n2ft3d;
-     fwrite(c1,sizeof(REAL),nn,fp);
-   fclose(fp);
+   if (Parallel_taskid==0)
+   {
+      fp = fopen("ELCOUT","wb");
+      fwrite(&icube,sizeof(int),1,fp);
+      fwrite(&nfft,sizeof(int),1,fp);
+      fwrite(&unit,sizeof(REAL),1,fp);
+      fwrite(&ispin,sizeof(int),1,fp);
+      fwrite(ne,sizeof(int),2,fp);
+      nn = (ne[0]+ne[1])*n2ft3d;
+   }
+   //fwrite(c1,sizeof(REAL),nn,fp);
+   for (i=0; i<(ne[0]+ne[1]); ++i)
+      d3db_c_write(fp,&c1[i*n2ft3d],c2,cpsi);
+   if (Parallel_taskid==0)
+      fclose(fp);
 
    /*  writeout ionic structure */
    nn = 3*nion;
    ecopy(&nn,&rzero,&zero,r1,&one);
-   fp = fopen("IONOUT","w");
-     fprintf(fp,"%d\n",nkatm);
-     for (ia=0; ia<nkatm; ++ia)
-     {
-        fprintf(fp,"\'%s \' %d\n",fname[ia],lmax[ia]);
-     }
-     fprintf(fp,"%d\n",nion);
-     for (ii=0; ii<nion; ++ii)
-     {
-        fprintf(fp,"%d ",katm[ii]+1);
-        fprintf(fp,FMT1,r2[0+ii*3]); fprintf(fp," "); 
-        fprintf(fp,FMT1,r2[1+ii*3]); fprintf(fp," ");
-        fprintf(fp,FMT1,r2[2+ii*3]); fprintf(fp," ");
-        fprintf(fp,FMT1,r1[0+ii*3]); fprintf(fp," ");
-        fprintf(fp,FMT1,r1[1+ii*3]); fprintf(fp," ");
-        fprintf(fp,FMT1,r1[2+ii*3]); fprintf(fp," ");
-        fprintf(fp,"\n");
-     }
-   fclose(fp);
+   if (Parallel_taskid==0)
+   {
+      fp = fopen("IONOUT","w");
+      fprintf(fp,"%d\n",nkatm);
+      for (ia=0; ia<nkatm; ++ia)
+      {
+         fprintf(fp,"\'%s \' %d\n",fname[ia],lmax[ia]);
+      }
+      fprintf(fp,"%d\n",nion);
+      for (ii=0; ii<nion; ++ii)
+      {
+         fprintf(fp,"%d ",katm[ii]+1);
+         fprintf(fp,FMT1,r2[0+ii*3]); fprintf(fp," ");
+         fprintf(fp,FMT1,r2[1+ii*3]); fprintf(fp," ");
+         fprintf(fp,FMT1,r2[2+ii*3]); fprintf(fp," ");
+         fprintf(fp,FMT1,r1[0+ii*3]); fprintf(fp," ");
+         fprintf(fp,FMT1,r1[1+ii*3]); fprintf(fp," ");
+         fprintf(fp,FMT1,r1[2+ii*3]); fprintf(fp," ");
+         fprintf(fp,"\n");
+      }
+      fclose(fp);
+   }
 
 
 
@@ -696,14 +716,14 @@ main(int argc, char *argv[])
    av=t2/((REAL) (icount*inner));
    if (oprint)
    {
-   printf("\n -----------------\n");
-   printf(" cputime in seconds\n");
-   printf(" prologue    : "); printf(FMTE15p5,t1);printf("\n");
-   printf(" main loop   : "); printf(FMTE15p5,t2);printf("\n");
-   printf(" epilogue    : "); printf(FMTE15p5,t3);printf("\n");
-   printf(" total       : "); printf(FMTE15p5,t4);printf("\n");
-   printf(" cputime/step: "); printf(FMTE15p5,av);printf("\n");
-   message(4);
+      printf("\n -----------------\n");
+      printf(" cputime in seconds\n");
+      printf(" prologue    : "); printf(FMTE15p5,t1);printf("\n");
+      printf(" main loop   : "); printf(FMTE15p5,t2);printf("\n");
+      printf(" epilogue    : "); printf(FMTE15p5,t3);printf("\n");
+      printf(" total       : "); printf(FMTE15p5,t4);printf("\n");
+      printf(" cputime/step: "); printf(FMTE15p5,av);printf("\n");
+      message(4);
    }
 
 }
