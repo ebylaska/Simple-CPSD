@@ -1,6 +1,8 @@
 #ifndef _FLOAT_H_
 #define _FLOAT_H_
 
+#include	"mpi.h"
+
 /* single precision floats */
 #define REALTYPE  "single precision"
 #define FMT1    "%f"
@@ -27,6 +29,7 @@
 #define ecffti  cffti_
 #define erfftb  rfftb_
 #define ecfftb  cfftb_
+#define MPI_REAL_PRECISION MPI_FLOAT
 
 
 /* double precision floats */
@@ -56,6 +59,7 @@
 #define ecffti  dcffti_
 #define erfftb  drfftb_
 #define ecfftb  dcfftb_
+#define MPI_REAL_PRECISION MPI_DOUBLE_PRECISION
 */
 
 

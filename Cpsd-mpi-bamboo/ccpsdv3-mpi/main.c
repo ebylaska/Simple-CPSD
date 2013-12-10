@@ -59,7 +59,7 @@ extern void cpsd(const int inner,
 
 main(int argc, char *argv[])
 {
-   int i,j,k,kk,l,n,ia,ii,ms,nn,one,zero,oprint;
+   int i,j,k,kk,l,n,ia,ii,ms,nn,one,zero,oprint,mapping;
    int i1,i2,i3,nsh;
    int nfft,nfft3d,n2ft3d;
    int ispin,imove,icube,inner,outer,ncut,icount,done;
@@ -121,6 +121,60 @@ main(int argc, char *argv[])
    message(1);
    }
 
+   /* read in aimd.param */
+   if (Parallel_taskid()==0)
+   {
+      fp = fopen("aimd.param","r");
+      fscanf(fp,"%d",&icube);
+      fscanf(fp,FMT1,&unit);
+      fscanf(fp,"%d",&nfft);
+      fscanf(fp,"%d %d %d",&ispin,&(ne[0]),&(ne[1]));
+      fscanf(fp,"%d %d",&nkatm,&nion);
+      fscanf(fp,"%d",&mapping);
+      fclose(fp);
+   }
+   Parallel_ibcast(0,1,&icube);
+   Parallel_ibcast(0,1,&nfft);
+   Parallel_rbcast(0,1,&unit);
+   Parallel_ibcast(0,1,&ispin);
+   Parallel_ibcast(0,2,ne);
+   Parallel_ibcast(0,1,&mapping);
+   printf(" 1 nfft=%d mapping=%d\n",nfft,mapping);
+
+   /* read parameters and flags */
+   if (Parallel_taskid()==0)
+   {
+      fp = fopen("CONTROL","r");
+      fscanf(fp,"%d %d", &ispin, &imove);
+      fscanf(fp,"%d", &icube);
+      fscanf(fp,FMT1,&unit);
+      fscanf(fp,FMT1,&dt);
+      fscanf(fp,FMT1,&fmass);
+      fscanf(fp,"%d %d", &inner, &outer);
+      fscanf(fp,FMT1,&tole);
+      fscanf(fp,FMT1,&tolc);
+      fscanf(fp,FMT1,&tolr);
+      fclose(fp);
+   }
+   Parallel_ibcast(0,1,&ispin);
+   Parallel_ibcast(0,1,&imove);
+   Parallel_ibcast(0,1,&icube);
+   Parallel_ibcast(0,1,&inner);
+   Parallel_ibcast(0,1,&outer);
+   Parallel_rbcast(0,1,&unit);
+   Parallel_rbcast(0,1,&dt);
+   Parallel_rbcast(0,1,&tole);
+   Parallel_rbcast(0,1,&tolc);
+   Parallel_rbcast(0,1,&tolr);
+   printf("nfft=%d mapping=%d\n",nfft,mapping);
+
+
+   d3db_init(nfft,nfft,nfft,mapping);
+   nfft3d = d3db_nfft3d();
+   n2ft3d = d3db_n2ft3d();
+   printf("nfft3d=%d n2ft3d=%d nfft=%d\n",nfft3d,n2ft3d,nfft);
+
+
    /* read in ELCIN header */
    fp = fopen("ELCIN","rb");
    fread(&icube,sizeof(int),1,fp);
@@ -129,11 +183,9 @@ main(int argc, char *argv[])
    fread(&ispin,sizeof(int),1,fp);
    fread(ne,sizeof(int),2,fp);
 
-   d3db_init(nfft,nfft,nfft,1);
-
    /* allocate electronic data */
-   nfft3d = (nfft/2+1)*nfft*nfft;
-   n2ft3d = (nfft+2)*nfft*nfft;
+   //nfft3d = (nfft/2+1)*nfft*nfft;
+   //n2ft3d = (nfft+2)*nfft*nfft;
    c1   = (REAL *) malloc((ne[0]+ne[1])*n2ft3d*sizeof(REAL));
    c2   = (REAL *) malloc((ne[0]+ne[1])*n2ft3d*sizeof(REAL));
    cpsi = (REAL *) malloc((ne[0]+ne[1])*n2ft3d*sizeof(REAL));
@@ -145,12 +197,6 @@ main(int argc, char *argv[])
    eig = (REAL *) malloc((ne[0]+ne[1])*sizeof(REAL));
    lwork = 4*ne[0];
    work = (REAL *) malloc(lwork*sizeof(REAL));
-
-   //cpsdlwork = 2*(nfft*nfft+10) + 40*nfft;
-   cpsdlwork  = (6+ispin)*n2ft3d;
-   cpsdlwork += nion*(5*nfft+3);
-   cpsdlwork += 7*ne[0]*ne[0];
-   cpsdwork = (REAL *) malloc(cpsdlwork*sizeof(REAL));
 
    nn = (ne[0]+ne[1])*n2ft3d;
    fread(c2,sizeof(REAL),nn,fp);
@@ -215,17 +261,17 @@ main(int argc, char *argv[])
    
 
    /* read parameters and flags */
-   fp = fopen("CONTROL","r");
-     fscanf(fp,"%d %d", &ispin, &imove);
-     fscanf(fp,"%d", &icube);
-     fscanf(fp,FMT1,&unit);
-     fscanf(fp,FMT1,&dt);
-     fscanf(fp,FMT1,&fmass);
-     fscanf(fp,"%d %d", &inner, &outer);
-     fscanf(fp,FMT1,&tole);
-     fscanf(fp,FMT1,&tolc);
-     fscanf(fp,FMT1,&tolr);
-   fclose(fp);
+   //fp = fopen("CONTROL","r");
+   //  fscanf(fp,"%d %d", &ispin, &imove);
+   //  fscanf(fp,"%d", &icube);
+   //  fscanf(fp,FMT1,&unit);
+   //  fscanf(fp,FMT1,&dt);
+   //  fscanf(fp,FMT1,&fmass);
+   //  fscanf(fp,"%d %d", &inner, &outer);
+   //  fscanf(fp,FMT1,&tole);
+   //  fscanf(fp,FMT1,&tolc);
+   //  fscanf(fp,FMT1,&tolr);
+   //fclose(fp);
 
    /* read in wavefunctions */
 
@@ -327,6 +373,13 @@ main(int argc, char *argv[])
       rcell[l+nsh+nsh] = i1*unita[2]+i2*unita[5]+i3*unita[8];
       ++l;
    }
+
+   /* allocate cpsd work array */
+   //cpsdlwork = 2*(nfft*nfft+10) + 40*nfft;
+   cpsdlwork  = (6+ispin)*n2ft3d;
+   cpsdlwork += nion*(5*nfft+3);
+   cpsdlwork += 7*ne[0]*ne[0];
+   cpsdwork = (REAL *) malloc(cpsdlwork*sizeof(REAL));
 
 
   /* geometrical center of the cluster and center of mass */

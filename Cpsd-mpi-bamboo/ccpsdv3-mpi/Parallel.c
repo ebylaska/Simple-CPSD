@@ -5,6 +5,7 @@
  */
 #include	<stdio.h>
 #include	"mpi.h"
+#include	"float.h"
 
 static int taskid,np;
 
@@ -28,5 +29,17 @@ void Parallel_end()
 {
    if (MPI_Finalize()!=MPI_SUCCESS)
       printf("Parallel_end error: MPI_Finalize failed\n");
+}
+
+void Parallel_ibcast(int psend, int sz, int *ivalue)
+{
+   if (MPI_Bcast(ivalue,sz,MPI_INTEGER,psend,MPI_COMM_WORLD)!=MPI_SUCCESS)
+      printf("Parallel_ibcast error: MPI_Bcast failed\n");
+}
+
+void Parallel_rbcast(int psend, int sz, REAL *value)
+{
+   if (MPI_Bcast(value,sz,MPI_REAL_PRECISION,psend,MPI_COMM_WORLD)!=MPI_SUCCESS)
+      printf("Parallel_rbcast error: MPI_Bcast failed\n");
 }
 

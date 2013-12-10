@@ -48,6 +48,8 @@ G E E D D D E E D D D D G D D D L G D D K E E E K K ; D G D D D i D f E L D D f 
 #include "float.h"
 #include "Parallel.h"
 #include "d3db.h"
+#include "hilbert.h"
+#include "hcurve.h"
 
 /********************/
 /* static variables */
@@ -181,28 +183,28 @@ static void mapping_init()
 	/* Hilbert mapping */
 	else
 	{
-		q_map1 = (int *) malloc(ny*nz*sizeof(int));
-		p_map1 = (int *) malloc(ny*nz*sizeof(int));
-		q_map2 = (int *) malloc(nz*(nx/2+1)*sizeof(int));
-		p_map2 = (int *) malloc(nz*(nx/2+1)*sizeof(int));
-		q_map3 = (int *) malloc(ny*(nx/2+1)*sizeof(int));
-		p_map3 = (int *) malloc(ny*(nx/2+1)*sizeof(int));
+	   q_map1 = (int *) malloc(ny*nz*sizeof(int));
+	   p_map1 = (int *) malloc(ny*nz*sizeof(int));
+	   q_map2 = (int *) malloc(nz*(nx/2+1)*sizeof(int));
+	   p_map2 = (int *) malloc(nz*(nx/2+1)*sizeof(int));
+	   q_map3 = (int *) malloc(ny*(nx/2+1)*sizeof(int));
+	   p_map3 = (int *) malloc(ny*(nx/2+1)*sizeof(int));
 
-		if (mapping2d==1)
-		{
-		   hilbert2d_map(ny,nz,    p_map1);
-		   hilbert2d_map(nz,nx/2+1,p_map2);
-		   hilbert2d_map(nx/2+1,ny,p_map3);
-		}
-		else
-		{
-			hcurve_map(ny,nz,    p_map1);
-			hcurve_map(nz,nx/2+1,p_map2);
-			hcurve_map(nx/2+1,ny,p_map3);
-		}
-		generate_map_indexes(taskid,np,ny,nz,    p_map1,q_map1,&nq1);
-		generate_map_indexes(taskid,np,nz,nx/2+1,p_map2,q_map2,&nq2);
-		generate_map_indexes(taskid,np,nx/2+1,ny,p_map3,q_map3,&nq3);
+           if (mapping2d==1)
+           {
+	      hilbert2d_map(ny,nz,    p_map1);
+	      hilbert2d_map(nz,nx/2+1,p_map2);
+	      hilbert2d_map(nx/2+1,ny,p_map3);
+           }
+           else
+           {
+              hcurve_map(ny,nz,    p_map1);
+	      hcurve_map(nz,nx/2+1,p_map2);
+	      hcurve_map(nx/2+1,ny,p_map3);
+           }
+	   generate_map_indexes(taskid,np,ny,nz,    p_map1,q_map1,&nq1);
+	   generate_map_indexes(taskid,np,nz,nx/2+1,p_map2,q_map2,&nq2);
+	   generate_map_indexes(taskid,np,nx/2+1,ny,p_map3,q_map3,&nq3);
 
 		nfft3d = (nx/2+1)*nq1;
 		if ((ny*nq2)>nfft3d) nfft3d = ny*nq2;
@@ -756,12 +758,12 @@ static void d3db_c_transpose_ijk_init()
  *****************************************/
 static void d3db_fft_init()
 {
-	tmpx = (REAL *) malloc(2*(2*nx+15)*sizeof(REAL));
-	tmpy = (REAL *) malloc(2*(2*ny+15)*sizeof(REAL));
-	tmpz = (REAL *) malloc(2*(2*nz+15)*sizeof(REAL));
-	erffti(nx,tmpx);
-	ecffti(ny,tmpy);
-	ecffti(nz,tmpz);
+   tmpx = (REAL *) malloc(2*(2*nx+15)*sizeof(REAL));
+   tmpy = (REAL *) malloc(2*(2*ny+15)*sizeof(REAL));
+   tmpz = (REAL *) malloc(2*(2*nz+15)*sizeof(REAL));
+   erffti(&nx,tmpx);
+   ecffti(&ny,tmpy);
+   ecffti(&nz,tmpz);
 }
 
 /*****************************************
@@ -832,7 +834,7 @@ static void d3db_c_transpose_jk(REAL A[], REAL tmp1[], REAL tmp2[])
 
       if (msglen>0)
       {
-         if (MPI_Irecv(&tmp2[2*i2_start[it]],2*msglen,MPI_DOUBLE_PRECISION,
+         if (MPI_Irecv(&tmp2[2*i2_start[it]],2*msglen,MPI_REAL_PRECISION,
                         proc_from,msgtype,
                         MPI_COMM_WORLD,&request[reqcnt]) != MPI_SUCCESS)
             printf("d3db_c_transpose_jk error: MPI_Irecv failed\n");
@@ -849,7 +851,7 @@ static void d3db_c_transpose_jk(REAL A[], REAL tmp1[], REAL tmp2[])
       msgtype   = 9;
 
       if (msglen>0)
-         if (MPI_Send(&tmp1[2*i1_start[it]], 2*msglen,MPI_DOUBLE_PRECISION,
+         if (MPI_Send(&tmp1[2*i1_start[it]], 2*msglen,MPI_REAL_PRECISION,
                       proc_to,msgtype,MPI_COMM_WORLD)!=MPI_SUCCESS)
             printf("d3db_c_transpose_jk error: MPI_Send failed\n");
    }
@@ -928,7 +930,7 @@ static void d3db_c_transpose_ijk(int op, REAL A[], REAL tmp1[], REAL tmp2[])
 
       if (msglen>0)
       {
-         if (MPI_Irecv(&tmp2[2*h_i2_start[op][it]],2*msglen,MPI_DOUBLE_PRECISION,
+         if (MPI_Irecv(&tmp2[2*h_i2_start[op][it]],2*msglen,MPI_REAL_PRECISION,
         		       proc_from,msgtype,
         		       MPI_COMM_WORLD,&request[reqcnt])!=MPI_SUCCESS)
             printf("d3db_c_transpose_ijk error: MPI_Irecv failed\n");
@@ -945,7 +947,7 @@ static void d3db_c_transpose_ijk(int op, REAL A[], REAL tmp1[], REAL tmp2[])
          msgtype = 29;
 
          if (msglen>0)
-            if (MPI_Send(&tmp1[2*h_i1_start[op][it]],2*msglen,MPI_DOUBLE_PRECISION,
+            if (MPI_Send(&tmp1[2*h_i1_start[op][it]],2*msglen,MPI_REAL_PRECISION,
                          proc_to,msgtype,MPI_COMM_WORLD)!=MPI_SUCCESS)
                printf("d3db_c_transpose_ijk error: MPI_Send failed\n");
    }
@@ -1020,7 +1022,7 @@ static void d3db_t_transpose_ijk(int op, REAL A[], REAL tmp1[], REAL tmp2[])
 
       if (msglen>0)
       {
-         if (MPI_Irecv(&tmp2[h_i2_start[op][it]],msglen,MPI_DOUBLE_PRECISION,
+         if (MPI_Irecv(&tmp2[h_i2_start[op][it]],msglen,MPI_REAL_PRECISION,
         		       proc_from,msgtype,
         		       MPI_COMM_WORLD,&request[reqcnt])!=MPI_SUCCESS)
         	 printf("d3db_t_transpose_ijk error: MPI_Irecv failed\n");
@@ -1037,7 +1039,7 @@ static void d3db_t_transpose_ijk(int op, REAL A[], REAL tmp1[], REAL tmp2[])
       msgtype = 39;
 
       if (msglen>0)
-         if (MPI_Send(&tmp1[h_i1_start[op][it]],msglen,MPI_DOUBLE_PRECISION,
+         if (MPI_Send(&tmp1[h_i1_start[op][it]],msglen,MPI_REAL_PRECISION,
                       proc_to,msgtype,MPI_COMM_WORLD)!=MPI_SUCCESS)
             printf("d3db_t_transpose_ijk error: MPI_Send failed\n");
    }
@@ -1130,25 +1132,28 @@ void d3db_end()
 */
 void d3db_init(int nx_in, int ny_in, int nz_in, int map_in)
 {
-	int np     = Parallel_np();
-	int taskid = Parallel_taskid();
+   int np     = Parallel_np();
+   int taskid = Parallel_taskid();
 
-	nx = nx_in;
-	ny = ny_in;
-	nz = nz_in;
-	mapping = map_in;
-	mapping2d = 1;
-	if (mapping==3)
-	{
-	   mapping = 2;
-	   mapping2d=2;
-	}
-	mapping_init();
-	if (mapping==1) d3db_c_transpose_jk_init();
-	if (mapping==2) d3db_c_transpose_ijk_init();
+   nx = nx_in;
+   ny = ny_in;
+   nz = nz_in;
+   mapping = map_in;
+   mapping2d = 1;
+   if (mapping==3)
+   {
+      mapping = 2;
+      mapping2d=2;
+   }
+   printf("fera\n");
+   mapping_init();
+   if (mapping==1) d3db_c_transpose_jk_init();
+   if (mapping==2) d3db_c_transpose_ijk_init();
+   printf("ferb\n");
 
-	//d3db_c_timereverse_init();
-	d3db_fft_init();
+   //d3db_c_timereverse_init();
+   d3db_fft_init();
+   printf("ferc\n");
 }
 
 
