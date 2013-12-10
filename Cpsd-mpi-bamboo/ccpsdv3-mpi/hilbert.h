@@ -5,6 +5,7 @@
 
 */
 
-extern  void    hilbert_map();
+extern  void    hilbert_map_c();
+//extern  void    hilbert_map();
 
 #endif

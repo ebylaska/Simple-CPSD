@@ -5,7 +5,8 @@
 
 */
 
-extern  void    hcurve_map();
+extern  void    hcurve_map_c();
+//extern  void    hcurve_map();
 
 #endif
 /* $Id: hcurve.h 21176 2011-10-10 06:35:49Z d3y133 $ */

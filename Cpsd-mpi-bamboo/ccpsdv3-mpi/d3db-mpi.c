@@ -192,15 +192,15 @@ static void mapping_init()
 
            if (mapping2d==1)
            {
-	      hilbert2d_map(ny,nz,    p_map1);
-	      hilbert2d_map(nz,nx/2+1,p_map2);
-	      hilbert2d_map(nx/2+1,ny,p_map3);
+	      hilbert2d_map_c(ny,nz,    p_map1);
+	      hilbert2d_map_c(nz,nx/2+1,p_map2);
+	      hilbert2d_map_c(nx/2+1,ny,p_map3);
            }
            else
            {
-              hcurve_map(ny,nz,    p_map1);
-	      hcurve_map(nz,nx/2+1,p_map2);
-	      hcurve_map(nx/2+1,ny,p_map3);
+              hcurve_map_c(ny,nz,    p_map1);
+	      hcurve_map_c(nz,nx/2+1,p_map2);
+	      hcurve_map_c(nx/2+1,ny,p_map3);
            }
 	   generate_map_indexes(taskid,np,ny,nz,    p_map1,q_map1,&nq1);
 	   generate_map_indexes(taskid,np,nz,nx/2+1,p_map2,q_map2,&nq2);

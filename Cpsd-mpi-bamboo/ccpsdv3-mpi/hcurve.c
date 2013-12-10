@@ -207,4 +207,6 @@ int     map[];
 	free(bfel);
 }
 
+void hcurve_map_c(int sizex, int sizey, int map[]) { hcurve_map(&sizex,&sizey,map); }
+
 
