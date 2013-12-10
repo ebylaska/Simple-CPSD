@@ -3,9 +3,11 @@
  *  Created on: Dec 9, 2013
  *      Author: bylaska
  */
+#include	<stdio.h>
 #include	"mpi.h"
 
 static int taskid,np;
+
 
 int Parallel_np() {return np;}
 int Parallel_taskid() {return taskid;}

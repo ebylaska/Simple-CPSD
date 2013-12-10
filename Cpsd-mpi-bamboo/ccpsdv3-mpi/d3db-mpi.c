@@ -45,8 +45,9 @@ G E E D D D E E D D D D G D D D L G D D K E E E K K ; D G D D D i D f E L D D f 
 #include <stdio.h>
 #include <stdlib.h>
 #include "mpi.h"
-#include	"float.h"
-#include	"Parallel.h"
+#include "float.h"
+#include "Parallel.h"
+#include "d3db.h"
 
 /********************/
 /* static variables */
@@ -67,7 +68,7 @@ static int *q_map3,*p_map3,nq3;
 static int *h_i1_start[6],*h_i2_start[6],*h_iq_to_i1[6],*h_iq_to_i2[6];
 
 /* fft workspace variables */
-static double *tmpx,*tmpy,*tmpz;
+static REAL *tmpx,*tmpy,*tmpz;
 
 
 /* data fetch routines */
@@ -89,7 +90,7 @@ int d3db_zplane_size() {return zplane_size;}
  ******************************************
 */
 static void generate_map_indexes(int taskid, int np, int ny, int nz,
-		                         int p_map[], int q_map[], *nq_out)
+		                 int p_map[], int q_map[], int *nq_out)
 {
 	int i,j,k,p,q,nq,nq1,nq2,rmdr1;
 	int *indx_proc,*indx_q,*tmp_p;
@@ -110,7 +111,7 @@ static void generate_map_indexes(int taskid, int np, int ny, int nz,
 	for (i=0; i<(ny*nz); ++i)
 	{
 		indx_proc[i] = p;
-		indx_q = q;
+		indx_q[i] = q;
 		if (taskid==p) ++nq;
 		++q;
 		if (q>=nq2)
@@ -125,7 +126,7 @@ static void generate_map_indexes(int taskid, int np, int ny, int nz,
 	for (k=0; k<nz; ++k)
 	for (j=0; j<ny; ++j)
 	{
-	   i = tmp_p[j+k*ny]
+	   i = tmp_p[j+k*ny];
 	   p = indx_proc[i];
 	   q = indx_q[i];
 	   p_map[j+k*ny] = p;
@@ -165,14 +166,14 @@ static void mapping_init()
 	      q_map[k] = q;
 	      p_map[k] = p;
 	      if (p==taskid) nq = q+1;
-          ++p
+          ++p;
           if (p>=np){p = 0; ++q;}
 	   }
 	   for (k=0; k<nz; ++k)
 	      if (p_map[k]==taskid)
 		     k_map[q_map[k]] = k;
-	   nfft3d = (nx/2+1)*ny*nq
-       n2ft3d = 2*nfft3d;
+	   nfft3d = (nx/2+1)*ny*nq;
+           n2ft3d = 2*nfft3d;
 	   nfft3d_map = nfft3d;
 	   n2ft3d_map = n2ft3d;
 	}
@@ -204,8 +205,8 @@ static void mapping_init()
 		generate_map_indexes(taskid,np,nx/2+1,ny,p_map3,q_map3,&nq3);
 
 		nfft3d = (nx/2+1)*nq1;
-		if (ny*nq2)>nfft3d) nfft3d = ny*nq2;
-		if (nz*nq3)>nfft3d) nfft3d = nz*nq3;
+		if ((ny*nq2)>nfft3d) nfft3d = ny*nq2;
+		if ((nz*nq3)>nfft3d) nfft3d = nz*nq3;
 		n2ft3d = 2*nfft3d;
 
 		nfft3d_map = nz*nq3;
@@ -223,26 +224,26 @@ static void d3db_fftbx_sub(int n, int nx, int nxh,
    atmp = A;
    for (i=0; i<n; ++i)
    {
-	   drfftb(&nx,atmp,tmpx);
+	   erfftb(&nx,atmp,tmpx);
 	   atmp = &atmp[2*nxh];
    }
 }
 
 static void d3db_fftby_sub2(int n, int ny,
-		                    REAL tmpy[], REAL A[])
+                            REAL tmpy[], REAL A[])
 {
 	int i;
 	REAL *atmp;
 	atmp = A;
 	for (i=0; i<n; ++i)
 	{
-		dcfftb(&ny,atmp,tmpy);
+		ecfftb(&ny,atmp,tmpy);
 		atmp = &atmp[2*ny];
 	}
 }
 
 static void d3db_fftbz_sub2(int n, int nz,
-		                    REAL tmpz[], REAL A[])
+                            REAL tmpz[], REAL A[])
 {
 	int i;
 	REAL *atmp;
@@ -250,7 +251,7 @@ static void d3db_fftbz_sub2(int n, int nz,
 	atmp = A;
 	for (i=0; i<n; ++i)
 	{
-		dcfftb(&nz,atmp,tmpz);
+		ecfftb(&nz,atmp,tmpz);
 		atmp = &atmp[2*nz];
 	}
 }
@@ -399,7 +400,7 @@ static void d3db_c_transpose_jk_init()
 	int taskid = Parallel_taskid();
 	int np = Parallel_np();
 
-	iq_to_i1 = (int *) malloc((nx/2+1)*ny*nq,sizeof(int));
+	iq_to_i1 = (int *) malloc((nx/2+1)*ny*nq*sizeof(int));
 	iq_to_i2 = (int *) malloc((nx/2+1)*ny*nz*sizeof(int));
 	i1_start = (int *) malloc((nz+1)*sizeof(int));
 	i2_start = (int *) malloc((nz+1)*sizeof(int));
@@ -486,8 +487,8 @@ static void d3db_c_transpose_ijk_init()
          /**** packing scheme ****/
          phere = p_map1[j+k*ny];
          qhere = q_map1[j+k*ny];
-         pto   = p_map2[k+i*nz]
-         qto   = q_map2[k+i*nz]
+         pto   = p_map2[k+i*nz];
+         qto   = q_map2[k+i*nz];
 
          if ((phere==taskid) && (pto==proc_to))
          {
@@ -722,7 +723,7 @@ static void d3db_c_transpose_ijk_init()
          /**** packing scheme ****/
          phere = p_map3[i+j*(nx/2+1)];
          qhere = q_map3[i+j*(nx/2+1)];
-         pto   = p_map1[j+k*ny]
+         pto   = p_map1[j+k*ny];
          qto   = q_map1[j+k*ny];
 
 
@@ -755,12 +756,12 @@ static void d3db_c_transpose_ijk_init()
  *****************************************/
 static void d3db_fft_init()
 {
-	tmpx = (double *) malloc(2*(2*nx+15)*sizeof(double));
-	tmpy = (double *) malloc(2*(2*ny+15)*sizeof(double));
-	tmpz = (double *) malloc(2*(2*nz+15)*sizeof(double));
-	drffti(nx,tmpx);
-	dcffti(ny,tmpy);
-	dcffti(nz,tmpz);
+	tmpx = (REAL *) malloc(2*(2*nx+15)*sizeof(REAL));
+	tmpy = (REAL *) malloc(2*(2*ny+15)*sizeof(REAL));
+	tmpz = (REAL *) malloc(2*(2*nz+15)*sizeof(REAL));
+	erffti(nx,tmpx);
+	ecffti(ny,tmpy);
+	ecffti(nz,tmpz);
 }
 
 /*****************************************
@@ -843,7 +844,7 @@ static void d3db_c_transpose_jk(REAL A[], REAL tmp1[], REAL tmp2[])
    for (it=1; it<np; ++it)
    {
       /* synchronous send of tmp */
-      proc_to = (taskid+it)%np);
+      proc_to = (taskid+it)%np;
       msglen  = i1_start[it+1] - i1_start[it];
       msgtype   = 9;
 
@@ -907,8 +908,8 @@ static void d3db_c_transpose_ijk(int op, REAL A[], REAL tmp1[], REAL tmp2[])
 
    for (i=0; i<nnfft3d; ++i)
    {
-      tmp1(2*h_iq_to_i1[op][i])   = A[2*i];
-      tmp1(2*h_iq_to_i1[op][i]+1) = A[2*i+1];
+      tmp1[2*h_iq_to_i1[op][i]]   = A[2*i];
+      tmp1[2*h_iq_to_i1[op][i]+1] = A[2*i+1];
    }
 
    /* it = 0, transpose data on same thread */
@@ -970,9 +971,9 @@ static void d3db_c_transpose_ijk(int op, REAL A[], REAL tmp1[], REAL tmp2[])
 
 
 /***********************************
- *					               *
- *	   D3dB_t_transpose_ijk		   *
- *					               *
+ *                                 *
+ *      d3db_t_transpose_ijk       *
+ *                                 *
  ***********************************
 This routine performs the operation
          A(i,k,j) <- A(i,j,k)
@@ -1006,7 +1007,7 @@ static void d3db_t_transpose_ijk(int op, REAL A[], REAL tmp1[], REAL tmp2[])
    /* it = 0, transpose data on same thread */
    msglen = h_i2_start[op][1] - h_i2_start[op][0];
    for (i=0; i<msglen; ++i)
-	   tmp2[h_i2_start[op]+i] = tmp1[h_i1_start[op]+i];
+      tmp2[h_i2_start[op][0]+i] = tmp1[h_i1_start[op][0]+i];
 
    /* receive packed array data */
    reqcnt = 0;
@@ -1085,39 +1086,39 @@ static void d3db_t_transpose_ijk(int op, REAL A[], REAL tmp1[], REAL tmp2[])
  *              d3db_end                 *
  *                                       *
  *****************************************/
-
-void d3dB_end()
+void d3db_end()
 {
-	d3db_timereverse_end();
-	d3db_fft_end();
+   int i;
+   //d3db_timereverse_end();
+   d3db_fft_end();
 
-	if (mapping==1)
-	{
-		free(q_map);
-		free(p_map);
-		free(k_map);
+   if (mapping==1)
+   {
+      free(q_map);
+      free(p_map);
+      free(k_map);
 
-		free(i1_start);
-		free(i2_start);
-		free(iq_to_i1);
-		free(iq_to_i2);
-	}
-	else
-	{
-		free(q_map1);
-		free(p_map1);
-		free(q_map2);
-		free(p_map2);
-		free(q_map3);
-		free(p_map3);
-		for (int i=0; i<6; ++i)
-		{
-			free(h_i1_start[i]);
-			free(h_i2_start[i]);
-			free(h_iq_to_i1[i]);
-			free(h_iq_to_i2[i]);
-		}
-	}
+      free(i1_start);
+      free(i2_start);
+      free(iq_to_i1);
+      free(iq_to_i2);
+   }
+   else
+   {
+      free(q_map1);
+      free(p_map1);
+      free(q_map2);
+      free(p_map2);
+      free(q_map3);
+      free(p_map3);
+      for (i=0; i<6; ++i)
+      {
+         free(h_i1_start[i]);
+         free(h_i2_start[i]);
+         free(h_iq_to_i1[i]);
+         free(h_iq_to_i2[i]);
+      }
+   }
 }
 
 /*****************************************
@@ -1127,7 +1128,7 @@ void d3dB_end()
  *****************************************
 
 */
-void d3db_init(int nx_in, int ny_in, int nz_in, map_in)
+void d3db_init(int nx_in, int ny_in, int nz_in, int map_in)
 {
 	int np     = Parallel_np();
 	int taskid = Parallel_taskid();
@@ -1146,7 +1147,7 @@ void d3db_init(int nx_in, int ny_in, int nz_in, map_in)
 	if (mapping==1) d3db_c_transpose_jk_init();
 	if (mapping==2) d3db_c_transpose_ijk_init();
 
-	d3db_c_timereverse_init();
+	//d3db_c_timereverse_init();
 	d3db_fft_init();
 }
 
@@ -1209,7 +1210,7 @@ void d3db_cr_fft3b(REAL A[], REAL tmp2[], REAL tmp3[])
                tmp2[2*k+1] = A[2*indx+1];
         	   indx += nxh;
             }
-            dcfftb(&nz,tmp2,tmpz);
+            ecfftb(&nz,tmp2,tmpz);
             for (k=0; k<nz; ++k)
             {
                A[2*indx1]   = tmp2[2*k];
@@ -1237,7 +1238,7 @@ void d3db_cr_fft3b(REAL A[], REAL tmp2[], REAL tmp3[])
                tmp2[2*j+1] = A[2*indx+1];
                indx += nxh;
             }
-            dcfftb(&ny,tmp2,tmpy);
+            ecfftb(&ny,tmp2,tmpy);
             for (j=0; j<ny; ++j)
             {
                A[2*indx1]   = tmp2[2*j];
@@ -1255,7 +1256,7 @@ void d3db_cr_fft3b(REAL A[], REAL tmp2[], REAL tmp3[])
       for (q=0; q<nq; ++q)
       for (j=0; j<ny; ++j)
       {
-         drfftb(&nx,A[2*indx],tmpx);
+         erfftb(&nx,A[2*indx],tmpx);
          indx += nxh;
       }
       zeroend_fftb(nx,ny,nq,1,A);
@@ -1267,11 +1268,11 @@ void d3db_cr_fft3b(REAL A[], REAL tmp2[], REAL tmp3[])
    else
    {
        /* fft along kz dimension, A(nz,kx,ky) <- fft1d^(-1)[A(kz,kx,ky)] */
-      d3db_fftbz_sub2(nz,tmpz,A)
+      d3db_fftbz_sub2(nq3,nz,tmpz,A);
       d3db_c_transpose_ijk(3,A,tmp2,tmp3);
 
       /* fft along ky dimension,A(ny,nz,kx) <- fft1d^(-1)[A(ky,nz,kx)] */
-      d3db_fftby_sub2(ny,tmpy,A);
+      d3db_fftby_sub2(nq2,ny,tmpy,A);
       d3db_c_transpose_ijk(4,A,tmp2,tmp3);
 
       /* fft along kx dimension, A(nx,ny,nz) <- fft1d^(-1)[A(kx,ny,nz)] */

@@ -4,6 +4,7 @@
 
 #include	"float.h"
 #include	"Parallel.h"
+#include	"d3db.h"
 
 /* define other routines */
 extern void get_cube(int itype, REAL unit, REAL *volume, REAL *unita, REAL *unitg);
@@ -56,9 +57,9 @@ extern void cpsd(const int inner,
           REAL *E,REAL *deltae, REAL *deltac, REAL *deltar);
 
 
-main()
+main(int argc, char *argv[])
 {
-   int i,j,k,kk,l,n,ia,ii,ms,nn,one,zero;
+   int i,j,k,kk,l,n,ia,ii,ms,nn,one,zero,oprint;
    int i1,i2,i3,nsh;
    int nfft,nfft3d,n2ft3d;
    int ispin,imove,icube,inner,outer,ncut,icount,done;
@@ -91,12 +92,19 @@ main()
 
 
 /*****************************|  PROLOGUE  |****************************/
+
+
    cpu1 = current_second();
    one   = 1;
    zero  = 0;
    rone  = 1.0;
    rzero = 0.0;
 
+   Parallel_init(&argc,&argv);
+   oprint = (Parallel_taskid()==0);
+
+   if (oprint)
+   {
    printf("          ****************************************************\n");
    printf("          *                                                  *\n");
    printf("          *     Car-Parrinello microcluster calculation      *\n");
@@ -111,7 +119,7 @@ main()
    printf("          *                                                  *\n");
    printf("          ****************************************************\n");
    message(1);
-
+   }
 
    /* read in ELCIN header */
    fp = fopen("ELCIN","rb");
@@ -121,8 +129,7 @@ main()
    fread(&ispin,sizeof(int),1,fp);
    fread(ne,sizeof(int),2,fp);
 
-
-
+   //d3db_init(nfft,nfft,nfft,1);
 
    /* allocate electronic data */
    nfft3d = (nfft/2+1)*nfft*nfft;
@@ -337,7 +344,11 @@ main()
 
     
    /* summary of input data */
+   if (oprint)
+   {
    printf("          ================ input data ========================\n");
+
+   printf("\n number of processors used: %d\n", Parallel_np());
    printf("\n options:\n");
    if (imove)
       printf("      ionic motion   = yes\n");
@@ -405,7 +416,7 @@ main()
    printf(FMTE12p3,tolr); printf(" (ion)\n");
    printf("\n\n");
    printf("          ================ iteration =========================\n");
-
+   }
 
 /*****************************|  begin ieration |****************************/
    message(2);
@@ -427,28 +438,30 @@ main()
            hml,lmd,cpsdwork,
            E,&deltae,&deltac,&deltar);
 
-
+      if (oprint)
+      {
       printf("%8d",inner*icount);
       printf(FMTE20p10,E[0]);
       printf(FMTE13p5,deltae);
       printf(FMTE13p5,deltac);
       printf(FMTE13p5,deltar);
       printf("\n");
+      }
       if ((fabs(deltae)< tole) && (deltac < tolc) && (deltar < tolr))
       {
-         printf("          *** tolerances ok.  iteration terminated.\n");
+         if (oprint) printf("          *** tolerances ok.  iteration terminated.\n");
          done = 1;
       }
       if (icount >= outer)
       {
-         printf("          *** arrived at the maximum iteration.  iteration terminated.\n");
+         if (oprint) printf("          *** arrived at the maximum iteration.  iteration terminated.\n");
          done = 1;
       }
    }
 
 
 /*****************************|  EPILOGUE  |****************************/
-   message(3);
+   if (oprint) message(3);
    cpu3 = current_second();
 
    /*  check orthnormality */
@@ -456,13 +469,13 @@ main()
    n2[0] = ne[0]-1; 
    n1[1] = ne[0]; 
    n2[1] = ne[0]+ne[1]-1; 
-   printf("\n orthonormality\n");
+   if (oprint) printf("\n orthonormality\n");
    for (ms=0; ms<ispin; ++ms)
    for (i=n1[ms]; i<=n2[ms]; ++i)
    for (j=i;      j<=n2[ms]; ++j)
    {
       w = gcdotc(nfft,&c1[i*n2ft3d],&c1[j*n2ft3d]);
-      printf("%3d %3d %3d",ms+1,i-n1[ms]+1,j-n1[ms]+1);printf(FMTE18p7,w);printf("\n");
+      if (oprint) {printf("%3d %3d %3d",ms+1,i-n1[ms]+1,j-n1[ms]+1);printf(FMTE18p7,w);printf("\n");}
    }
 
    /* diagnalization of hamiltonian matrix */
@@ -500,7 +513,8 @@ main()
    for (i=0; i<3; ++i) gc[i] /= ((REAL) nion);
    for (i=0; i<3; ++i) cm[i] /= am;
 
-
+   if (oprint)
+   {
    printf("\n\n          ================ summary of results ================\n");
    printf("\n final position of ions:\n");
    for (ii=0; ii<nion; ++ii)
@@ -535,6 +549,7 @@ main()
    {
       printf(FMTE18p7,eig[i+nn]); printf(" ("); printf(FMT8p3,eig[i+nn]*ev); printf("eV) ");
       printf(FMTE18p7,eig[i+(ispin-1)*ne[0]]); printf(" ("); printf(FMT8p3,eig[i+(ispin-1)*ne[0]]*ev); printf("eV)\n");
+   }
    }
      
    /* writeout  ELCOUT */
@@ -615,6 +630,9 @@ main()
    free(c2);
    free(c1);
 
+   //d3db_end();
+   Parallel_end();
+
    cpu4 = current_second();
 
    /* report consumed cputime */
@@ -623,6 +641,8 @@ main()
    t3=cpu4-cpu3;
    t4=cpu4-cpu1;
    av=t2/((REAL) (icount*inner));
+   if (oprint)
+   {
    printf("\n -----------------\n");
    printf(" cputime in seconds\n");
    printf(" prologue    : "); printf(FMTE15p5,t1);printf("\n");
@@ -631,5 +651,6 @@ main()
    printf(" total       : "); printf(FMTE15p5,t4);printf("\n");
    printf(" cputime/step: "); printf(FMTE15p5,av);printf("\n");
    message(4);
+   }
 
 }

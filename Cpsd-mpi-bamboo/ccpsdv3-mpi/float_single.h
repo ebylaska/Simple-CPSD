@@ -23,6 +23,10 @@
 #define esyev	ssyev
 #define egemm	sgemm
 #define ieamax  isamax
+#define erffti  rffti_
+#define ecffti  cffti_
+#define erfftb  rfftb_
+#define ecfftb  cfftb_
 
 
 /* double precision floats */
@@ -48,6 +52,10 @@
 #define esyev	dsyev
 #define egemm	dgemm
 #define ieamax  idamax
+#define erffti  drffti_
+#define ecffti  dcffti_
+#define erfftb  drfftb_
+#define ecfftb  dcfftb_
 */
 
 
