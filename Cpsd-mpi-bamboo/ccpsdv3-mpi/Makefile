@@ -32,4 +32,4 @@ cleanobjects:
 	rm -f ${OBJECTS} 
 
 clean:
-	rm -f core ${OBJECTS} ${BINDIR}/scpsdv3.x ${BINDIR}/dcpsdv3.x
+	rm -f core ${OBJECTS} ${BINDIR}/scpsdv3-mpi.x ${BINDIR}/dcpsdv3-mpi.x
