@@ -129,7 +129,7 @@ main(int argc, char *argv[])
    fread(&ispin,sizeof(int),1,fp);
    fread(ne,sizeof(int),2,fp);
 
-   //d3db_init(nfft,nfft,nfft,1);
+   d3db_init(nfft,nfft,nfft,1);
 
    /* allocate electronic data */
    nfft3d = (nfft/2+1)*nfft*nfft;
@@ -630,7 +630,7 @@ main(int argc, char *argv[])
    free(c2);
    free(c1);
 
-   //d3db_end();
+   d3db_end();
    Parallel_end();
 
    cpu4 = current_second();
