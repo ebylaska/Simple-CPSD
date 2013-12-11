@@ -10,8 +10,8 @@
 extern void get_cube(int itype, REAL unit, REAL *volume, REAL *unita, REAL *unitg);
 extern void get_g(int nfft,REAL *unitg, REAL *g);
 extern void get_masker(const int nfft, const REAL ggcut, const REAL *unitg, int *masker1);
-extern REAL gcdotc(const int nfft, const REAL *psi1, const REAL *psi2);
-extern REAL gssum(const int nfft, const REAL *xdn);
+//extern REAL gcdotc(const int nfft, const REAL *psi1, const REAL *psi2);
+//extern REAL gssum(const int nfft, const REAL *xdn);
 extern REAL current_second();
 extern void eigsrt(REAL *D, REAL *V, int n);
 
@@ -363,10 +363,10 @@ main(int argc, char *argv[])
      z += q;
    }
 
-   cewald = -0.50*zz*(alpha/rs+gssum(nfft,vg)/omega)
+   cewald = -0.50*zz*(alpha/rs+d3db_t_sum(vg)/omega)
             -0.50*(z*z-zz)*rcut*rcut*pi/omega;
 
-   /* lattice vectors in the cordination space */
+   /* lattice vectors in the coordination space */
    ii = 2*ncut+1;
    nsh = ii*ii*ii;
    rcell = (REAL *) malloc(3*nsh*sizeof(REAL));
@@ -383,7 +383,7 @@ main(int argc, char *argv[])
 
    /* allocate cpsd work array */
    //cpsdlwork = 2*(nfft*nfft+10) + 40*nfft;
-   cpsdlwork  = (6+ispin)*n2ft3d;
+   cpsdlwork  = (8+ispin)*n2ft3d;
    cpsdlwork += nion*(5*nfft+3);
    cpsdlwork += 7*ne[0]*ne[0];
    cpsdwork = (REAL *) malloc(cpsdlwork*sizeof(REAL));

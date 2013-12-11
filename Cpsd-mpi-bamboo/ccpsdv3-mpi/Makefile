@@ -1,10 +1,10 @@
 BINDIR = ../bin
 
-OBJECTS = main.o cpsd.o dirac_exchange.o vosko.o message.o get_cube.o get_g.o get_masker.o strfac.o gcdotc.o gsdot.o gssum.o eigsrt.o second.o d3db-mpi.o hilbert.o hcurve.o olist.o Parallel.o
+OBJECTS = main.o cpsd.o dirac_exchange.o vosko.o message.o get_cube.o get_g.o get_masker.o strfac.o eigsrt.o second.o d3db-mpi.o hilbert.o hcurve.o olist.o Parallel.o
 
 LIBDIR = ../lib
-LIBRARYs = -lfftpack3ds -lfftpack -llapack -lblas
-LIBRARYd = -lfftpack3d -lfftpack -llapack -lblas
+LIBRARYs = -lfftpack -llapack -lblas
+LIBRARYd = -lfftpack -llapack -lblas
 
 OPTIONS = -O3  -L$(LIBDIR)
 CFLAGS =  $(OPTIONS) 

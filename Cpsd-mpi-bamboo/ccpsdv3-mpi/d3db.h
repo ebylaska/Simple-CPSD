@@ -24,11 +24,13 @@ extern int d3db_zplane_size();
 extern void d3db_end();
 extern void d3db_init(int, int, int, int);
 extern void d3db_cr_fft3b(REAL*, REAL*, REAL*);
+extern void d3db_rc_fft3f(REAL*, REAL*, REAL*);
 
-REAL d3db_cc_dot(REAL*, REAL*);
-REAL d3db_cc_idot(REAL*, REAL*);
-REAL d3db_tt_dot(REAL*, REAL*);
-REAL d3db_tt_idot(REAL*, REAL*);
+REAL d3db_cc_dot(const REAL*, const REAL*);
+REAL d3db_cc_idot(const REAL*, const REAL*);
+REAL d3db_tt_dot(const REAL*, const REAL*);
+REAL d3db_tt_idot(const REAL*, const REAL*);
+REAL d3db_t_sum(const REAL*);
 
 void d3db_c_read(FILE*, REAL*, REAL*, REAL*);
 void d3db_c_write(FILE*, REAL*, REAL*, REAL*);

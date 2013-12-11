@@ -286,6 +286,22 @@ static void zeroend_fftb(int nx, int ny,int nq, int ne, REAL A[])
    }
 }
 
+static void cshift_fftf(int nx, int ny, int nq, int ne, REAL A[])
+{
+   int i,j,indx;
+
+   indx = 0;
+   for (j=0; j<(ny*nq*ne); ++j)
+   {
+      for (i=nx; i>=2; --i)
+	     A[indx+i] = A[indx+i-1];
+	  A[indx+1]    = 0.0;
+      A[indx+nx+1] = 0.0;
+	  indx += (nx+2);
+   }
+}
+
+
 
 /***********************************
  *					               *
@@ -400,10 +416,10 @@ static void d3db_c_transpose_jk_init()
 	int index1,index2,it,proc_to,proc_from,qhere,phere,qto,pto,qfrom,pfrom,itmp,i,j,k;
 
 	int taskid = Parallel_taskid();
-	int np = Parallel_np();
+	int np     = Parallel_np();
 
 	iq_to_i1 = (int *) malloc((nx/2+1)*ny*nq*sizeof(int));
-	iq_to_i2 = (int *) malloc((nx/2+1)*ny*nz*sizeof(int));
+	iq_to_i2 = (int *) malloc((nx/2+1)*ny*nq*sizeof(int));
 	i1_start = (int *) malloc((nz+1)*sizeof(int));
 	i2_start = (int *) malloc((nz+1)*sizeof(int));
 
@@ -801,13 +817,11 @@ static void d3db_c_transpose_jk(REAL A[], REAL tmp1[], REAL tmp2[])
    int i,it,proc_to,proc_from,msgtype,msglen;
    int reqcnt;
    MPI_Request *request;
-   MPI_Status  *status;
 
    int taskid = Parallel_taskid();
    int np     =  Parallel_np();
 
    request = (MPI_Request *) malloc(np*sizeof(MPI_Request));
-   status  = (MPI_Status *)   malloc(4*np*sizeof(MPI_Status));
 
    /* pack A(i) array */
    for (i=0; i<nfft3d; ++i)
@@ -858,7 +872,7 @@ static void d3db_c_transpose_jk(REAL A[], REAL tmp1[], REAL tmp2[])
 
    /* wait for completion of mp_send, also do a sync */
    if (np>1)
-      if (MPI_Waitall(reqcnt,request,status) != MPI_SUCCESS)
+      if (MPI_Waitall(reqcnt,request,MPI_STATUS_IGNORE) != MPI_SUCCESS)
          printf("d3db_c_transpose_jk error: MPI_Waitall failed\n");
 
    /* unpack A(i) array */
@@ -868,7 +882,6 @@ static void d3db_c_transpose_jk(REAL A[], REAL tmp1[], REAL tmp2[])
       A[2*i+1] = tmp2[2*iq_to_i2[i]+1];
    }
    free(request);
-   free(status);
 }
 
 
@@ -1155,9 +1168,9 @@ void d3db_init(int nx_in, int ny_in, int nz_in, int map_in)
 
 
 /***********************************
- *			           *
- *	     d3db_cr_fft3b	   *
- *			           *
+ *			                       *
+ *	     d3db_cr_fft3b       	   *
+ *			                       *
  ***********************************
                       .;;,
  .,.               .,;;;;;,
@@ -1169,7 +1182,7 @@ void d3db_init(int nx_in, int ny_in, int nz_in, int map_in)
            `;:%%%%%%;;%%;;;'
               .:::::::.
                    s.
- This routine performs the operation of a three dimensional complex to complex
+ This routine performs the operation of a three dimensional complex to real
  inverse fft
 
      A(nx,ny(nb),nz(nb)) <- FFT3^(-1)[A(kx,ky,kz)]
@@ -1195,7 +1208,7 @@ void d3db_cr_fft3b(REAL A[], REAL tmp2[], REAL tmp3[])
    if (mapping==1)
    {
       /* Do a transpose of A, A(kx,kz,ky) <- A(kx,ky,kz) */
-      //d3db_c_transpose_jk(A,tmp2,tmp3);
+      d3db_c_transpose_jk(A,tmp2,tmp3);
 
 
       /* fft along kz dimension, A(kx,nz,ky) <- fft1d^(-1)[A(kx,kz,ky)] */
@@ -1220,7 +1233,7 @@ void d3db_cr_fft3b(REAL A[], REAL tmp2[], REAL tmp3[])
                indx1 += nxh;
             }
          }
-         indx0 = indx0 + nxhz;
+         indx0 += nxhz;
       }
 
       /* transpose of A, A(kx,ky,nz) <- A(kx,nz,ky) */
@@ -1258,7 +1271,7 @@ void d3db_cr_fft3b(REAL A[], REAL tmp2[], REAL tmp3[])
       for (q=0; q<nq; ++q)
       for (j=0; j<ny; ++j)
       {
-         erfftb(&nx,A[2*indx],tmpx);
+         erfftb(&nx,&A[2*indx],tmpx);
          indx += nxh;
       }
       zeroend_fftb(nx,ny,nq,1,A);
@@ -1304,7 +1317,132 @@ d$PP""?-,"?$$,?$h`$$,,$$'$F44"
    `""?==""=-"" `""-`'_,,,,
            .ccu?m?e?JC,-,"=?
                      """=='?"
+This routine performs the operation of a three dimensional real to complex
+ fft
+
+     A(kx,ky,kz) <- FFT3[A(nx,ny,nz)]
+
+ Entry - A: a column distributed 3d block
+         tmp2,tmp3: temporary work spaces that must be at
+              least the size of (real) n2ft3d
+ Exit - A is transformed and the padding is set to zero
+ uses - d3dB_c_transpose_jk, d3db_c_transpose_ijk
 */
+
+void d3db_rc_fft3f(REAL A[], REAL tmp2[], REAL tmp3[])
+{
+   int i,j,k,q,indx, nxh,nxhy,nxhz,indx0,indx1;
+
+   nxh = (nx/2+1);
+   nxhz = nxh*nz;
+   nxhy = nxh*ny;
+
+   /* slab mapping */
+   if (mapping==1)
+   {
+      /* fft along nx dimension -  A(kx,ny,nz) <- fft1d[A(nx,ny,nz)] */
+      indx = 0;
+      for (q=0; q<nq; ++q)
+      for (j=0; j<ny; ++j)
+      {
+         erfftf(&nx,&A[2*indx],tmpx);
+    	 indx += nxh;
+      }
+      cshift_fftf(nx,ny,nq,1,A);
+
+
+      /* fft along ny dimension -A(kx,ky,nz) <- fft1d[A(kx,ny,nz)]  */
+      for (i=0; i<nxh; ++i)
+      {
+         indx  = i;
+         indx1 = i;
+         for (q=0; q<nq; ++q)
+         {
+            for (j=0; j<ny; ++j)
+            {
+        	   tmp2[2*j]   = A[2*indx];
+        	   tmp2[2*j+1] = A[2*indx+1];
+        	   indx += nxh;
+            }
+
+            ecfftf(&ny,tmp2,tmpy);
+
+            for (j=0; j<ny; ++j)
+            {
+            	A[2*indx1]   = tmp2[2*j];
+            	A[2*indx1+1] = tmp2[2*j+1];
+            	indx1 += nxh;
+            }
+         }
+      }
+
+      /* transpose of A - A(ky,nz,ky) <- A(kx,ky,nz) */
+      d3db_c_transpose_jk(A,tmp2,tmp3);
+
+      /* fft along nz dimension - A(kx,kz,ky) <- fft1d[A(kx,nz,ky)] */
+      for (i=0; i<nxh; ++i)
+      {
+    	  indx  = i;
+    	  indx1 = i;
+    	  for (q=0; q<nq; ++q)
+    	  {
+             for (k=0; k<nz; ++k)
+             {
+            	 tmp2[2*k]   = A[2*indx];
+            	 tmp2[2*k+1] = A[2*indx+1];
+            	 indx += nxh;
+             }
+
+             ecfftf(&nz,tmp2,tmpz);
+
+             for (k=0; k<nz; ++k)
+             {
+                A[2*indx1]   = tmp2[2*k];
+            	A[2*indx1+1] = tmp2[2*k+1];
+            	indx1 += nxh;
+             }
+    	  }
+      }
+
+      /* transpose of A - A(kx,ky,kz) <- A(kx,kz,ky) */
+     d3db_c_transpose_jk(A,tmp2,tmp3);
+   }
+
+   /* hilbert mapping */
+   else
+   {
+      /* fft along nx dimension - A(kx,ny,nz) <- fft1d[A(nx,ny,nz)] */
+	  indx = 0;
+	  for (q=0; q<nq1; ++q)
+	  {
+		  erfftf(&nx,&A[2*indx],tmpx);
+		  indx += nxh;
+	  }
+	  cshift_fftf(nx,nq1,1,1,A);
+
+	  d3db_c_transpose_ijk(1,A,tmp2,tmp3);
+
+	  /* fft along ny dimension - A(ky,nz,kx) <- fft1d[A(ny,nz,kx)] */
+      indx = 0;
+      for (q=0; q<nq2; ++q)
+      {
+    	  ecfftf(&ny,&A[2*indx],tmpy);
+    	  indx += ny;
+      }
+
+      d3db_c_transpose_ijk(2,A,tmp2,tmp3);
+
+      /* fft along nz dimension - A(kz,kx,ky) <- fft1d[A(nz,kx,ky)] */
+      indx = 0;
+      for (q=0; q<nq3; ++q)
+      {
+    	  ecfftf(&nz,&A[2*indx],tmpz);
+    	  indx += nz;
+      }
+
+   }
+
+}
 
 
 
@@ -1315,7 +1453,7 @@ d$PP""?-,"?$$,?$h`$$,,$$'$F44"
  ***********************************
 
 */
-REAL d3db_cc_dot(REAL A[], REAL B[])
+REAL d3db_cc_dot(const REAL A[], const REAL B[])
 {
     int i,j,k,q,index,p;
     int np = Parallel_np();
@@ -1380,7 +1518,7 @@ REAL d3db_cc_dot(REAL A[], REAL B[])
  ***********************************
 
 */
-REAL d3db_cc_idot(REAL A[], REAL B[])
+REAL d3db_cc_idot(const REAL A[], const REAL B[])
 {
     int i,j,k,q,index,p;
     int np = Parallel_np();
@@ -1442,7 +1580,7 @@ REAL d3db_cc_idot(REAL A[], REAL B[])
  ***********************************
 
 */
-REAL d3db_tt_dot(REAL A[], REAL B[])
+REAL d3db_tt_dot(const REAL A[], const REAL B[])
 {
     int i,j,k,q,index,p;
     int np = Parallel_np();
@@ -1509,7 +1647,7 @@ REAL d3db_tt_dot(REAL A[], REAL B[])
  ***********************************
 
 */
-REAL d3db_tt_idot(REAL A[], REAL B[])
+REAL d3db_tt_idot(const REAL A[], const REAL B[])
 {
     int i,j,k,q,index,p;
     int np = Parallel_np();
@@ -1562,6 +1700,74 @@ REAL d3db_tt_idot(REAL A[], REAL B[])
 
    return sum;
 }
+
+
+/***********************************
+ *					               *
+ *	         d3db_t_sum  	       *
+ *					               *
+ ***********************************
+
+*/
+REAL d3db_t_sum(const REAL A[])
+{
+    int i,j,k,q,index,p;
+    int np = Parallel_np();
+    int taskid = Parallel_taskid();
+    REAL sum = 0.0;
+
+   /**** slab mapping ****/
+   if (mapping==1)
+   {
+      /* kx!=0 plane, so double count */
+	  for (q=0; q<nq; ++q)
+      for (j=0; j<ny; ++j)
+	  for (i=1; i<(nx/2+1); ++i)
+	  {
+		  index = q*(nx/2+1)*ny + j*(nx/2+1) + i;
+		  sum += A[index];
+	  }
+	  sum *= 2;
+
+      /* kx==0 plane, so single count */
+	  for (q=0; q<nq; ++q)
+	  for (j=0; j<ny; ++j)
+	  {
+		 index = q*(nx/2+1)*ny + j*(nx/2+1);
+		 sum += A[index];
+	  }
+   }
+
+   /* hilbert mapping */
+   else
+   {
+      /* kx!=0 plane, so double count */
+	  for (index=0; index<nfft3d_map; ++index)
+	  {
+		  sum += A[index];
+	  }
+	  sum *= 2;
+
+      /* kx==0 plane, so single count */
+	  i = 0;
+	  for (k=0; k<nz; ++k)
+	  for (j=0; j<ny; ++j)
+	  {
+		  i = 0;
+		  d3db_ijktoindexp(i,j,k,&index,&p);
+		  if (p==taskid)
+			  sum -= (A[index]);
+	  }
+   }
+
+   /**** add up sums from other nodes ****/
+   if (np>1)
+	   sum = Parallel_SumAll(sum);
+
+   return sum;
+}
+
+
 
 
 /***********************************

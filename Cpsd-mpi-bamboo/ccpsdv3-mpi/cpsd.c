@@ -2,7 +2,8 @@
 #include	<math.h>
 #include	<stdio.h>
 #include	"float.h"
-
+#include    "Parallel.h"
+#include	"d3db.h"
 #include	"dirac_exchange.h"
 #include	"vosko.h"
 
@@ -21,9 +22,9 @@
 
 
 /* define other routines */
-extern REAL gssum(const int nfft, const REAL *xdn);
-extern REAL gsdot(const int nfft, const REAL *psi1, const REAL *psi2);
-extern REAL gcdotc(const int nfft, const REAL *psi1, const REAL *psi2);
+//extern REAL gssum(const int nfft, const REAL *xdn);
+//extern REAL gsdot(const int nfft, const REAL *psi1, const REAL *psi2);
+//extern REAL gcdotc(const int nfft, const REAL *psi1, const REAL *psi2);
 
 extern void phafac(const int nfft,const REAL pi, const REAL *unitg,const int nion,const REAL *r1,REAL *ex1,REAL *ex2,REAL *ex3);
 extern void strfac(const int nfft, const REAL *ex1, const REAL *ex2, const REAL *ex3, REAL *exi);
@@ -74,7 +75,7 @@ void cpsd(const int inner,
    int nion3,nn,inc2c,inc3c,inc2r,inc3r,naux;
    int one,zero,n2ft3d2,nfft2,nffth;
    int n1[2],n2[2];
-   REAL *dti,*aux,*dng,*vall,*s,*vtmp,*xcp,*xce;
+   REAL *dti,*aux,*dng,*vall,*s,*vtmp,*xcp,*xce,*tmp2,*tmp3;
    REAL *ex1,*ex2,*ex3,*rex,*rex1,*qex,*exi;
    REAL *s11,*s12,*s21,*s22,*sa0,*sa1,*st1;
    REAL *pex1,*pex2,*pex3;
@@ -84,6 +85,9 @@ void cpsd(const int inner,
    REAL sw1,sw2,sw3,cw1[2],cw2[2],cw3[2];
    REAL rtmp;
    char tch1,tch2;
+   int icount;
+   int taskid = Parallel_taskid();
+   int np     = Parallel_np();
 
 
    /*  CONSTANTS */
@@ -144,6 +148,8 @@ void cpsd(const int inner,
    //sa0 = (REAL *) malloc(ne[0]*ne[0]*sizeof(REAL));
 
    //aux  = &cpsdwork[jr]; jr += naux;
+   tmp2 = &cpsdwork[jr]; jr += n2ft3d;
+   tmp3 = &cpsdwork[jr]; jr += n2ft3d;
    dng  = &cpsdwork[jr]; jr += n2ft3d;
    vall = &cpsdwork[jr]; jr += n2ft3d;
    vtmp = &cpsdwork[jr]; jr += n2ft3d;
@@ -175,10 +181,12 @@ void cpsd(const int inner,
 
       /* wavefunctions in the coordination spaceJ - fftpack3d -  complex to real fft */
       ecopy(&nn,c1,&one,cpsi,&one);
+      //for (i=0; i<(ne[0]+ne[1]); ++i)
+      //   cr_fft3b_(&cpsi[i*n2ft3d],
+      //            &inc2c,&inc3c,&inc2r,&inc3r,
+      //            &nfft,&nfft,&nfft,aux,&naux);
       for (i=0; i<(ne[0]+ne[1]); ++i)
-         cr_fft3b_(&cpsi[i*n2ft3d], 
-                  &inc2c,&inc3c,&inc2r,&inc3r, 
-                  &nfft,&nfft,&nfft,aux,&naux);
+         d3db_cr_fft3b(&cpsi[i*n2ft3d],tmp2,tmp3);
 
       /* wavefunctions in the coordination spaceJ - fftpack3d -  complex to real fft */
       /* electron spin density */
@@ -198,9 +206,10 @@ void cpsd(const int inner,
       for (k=0; k<n2ft3d; ++k)
          dng[k] = (dn[k] + dn[k+(ispin-1)*n2ft3d])*scal1;
 
-      rc_fft3f_(dng,
-               &inc2c,&inc3c,&inc2r,&inc3r,
-               &nfft,&nfft,&nfft,aux,&naux);
+      //rc_fft3f_(dng,
+      //         &inc2c,&inc3c,&inc2r,&inc3r,
+      //         &nfft,&nfft,&nfft,aux,&naux);
+      d3db_rc_fft3f(dng,tmp2,tmp3);
 
       for (k=0; k<n2ft3d; ++k) dng[k] *= masker[k];
 
@@ -251,9 +260,9 @@ void cpsd(const int inner,
                xce[k] = dng[kk+1]*vtmp[kk] - dng[kk]*vtmp[kk+1];
                kk += 2;
             }
-            fion[3*ii]   = gsdot(nfft,  G,          xce);
-            fion[3*ii+1] = gsdot(nfft, &G[nfft3d],  xce);
-            fion[3*ii+2] = gsdot(nfft, &G[2*nfft3d],xce);
+            fion[3*ii]   = d3db_tt_idot( G,          xce);
+            fion[3*ii+1] = d3db_tt_idot(&G[nfft3d],  xce);
+            fion[3*ii+2] = d3db_tt_idot(&G[2*nfft3d],xce);
          }
 
          /* non-local pseudopotential */
@@ -286,7 +295,8 @@ void cpsd(const int inner,
             }
             for (i=0; i<(ne[0]+ne[1]); ++i)
             {
-               sw1 = -gcdotc(nfft,vtmp,&c1[i*n2ft3d])*scal2/vnlnrm[ia*9+l];
+               //sw1 = -gcdotc(nfft,vtmp,&c1[i*n2ft3d])*scal2/vnlnrm[ia*9+l];
+               sw1 = -d3db_cc_dot(vtmp,&c1[i*n2ft3d])*scal2/vnlnrm[ia*9+l];
                eaxpy(&n2ft3d,&sw1,vtmp,&one,&c2[i*n2ft3d],&one);
                if (move)
                {
@@ -298,9 +308,9 @@ void cpsd(const int inner,
                      kk += 2;
                   }
                   if (ispin==1) sw1 *= 2;
-                  fion[3*ii]   -= 2*sw1*gsdot(nfft,  G,          xce);
-                  fion[3*ii+1] -= 2*sw1*gsdot(nfft, &G[nfft3d],  xce);
-                  fion[3*ii+2] -= 2*sw1*gsdot(nfft, &G[2*nfft3d],xce);
+                  fion[3*ii]   -= 2*sw1*d3db_tt_idot( G,          xce);
+                  fion[3*ii+1] -= 2*sw1*d3db_tt_idot(&G[nfft3d],  xce);
+                  fion[3*ii+2] -= 2*sw1*d3db_tt_idot(&G[2*nfft3d],xce);
                }/*move*/
             }/*i*/
          }/*l*/
@@ -309,6 +319,7 @@ void cpsd(const int inner,
      /* Ewald summation */
      if (move)
      {
+    	icount = 0;
         for (ii=0; ii<nion; ++ii)
         {
            ia = katm[ii];
@@ -324,46 +335,49 @@ void cpsd(const int inner,
               vtmp[k] = (exi[kk]*s[kk+1] - exi[kk+1]*s[kk])*vg[k];
               kk += 2;
            }
-           fion[3*ii]   += gsdot(nfft,G,vtmp)           *zv[ia]*scal2;
-           fion[3*ii+1] += gsdot(nfft,&G[nfft3d],vtmp)  *zv[ia]*scal2;
-           fion[3*ii+2] += gsdot(nfft,&G[2*nfft3d],vtmp)*zv[ia]*scal2;
+           fion[3*ii]   += d3db_tt_idot(G,vtmp)           *zv[ia]*scal2;
+           fion[3*ii+1] += d3db_tt_idot(&G[nfft3d],vtmp)  *zv[ia]*scal2;
+           fion[3*ii+2] += d3db_tt_idot(&G[2*nfft3d],vtmp)*zv[ia]*scal2;
 
 
            /* realspace ewald */
            for (jj=ii+1; jj<nion; ++jj)
            {
-              dx=r1[3*ii]   - r1[3*jj];
-              dy=r1[3*ii+1] - r1[3*jj+1];
-              dz=r1[3*ii+2] - r1[3*jj+2];
-              zz=zv[katm[ii]]*zv[katm[jj]];
-              sw1=0.0; sw2=0.0; sw3=0.0;
-              for (l=0; l<nsh; ++l)
-              {
-                 x=rcell[l]        +dx;
-                 y=rcell[l+nsh]    +dy;
-                 z=rcell[l+nsh+nsh]+dz;
-                 r=sqrt(x*x+y*y+z*z);
-                 w=r/rcut;
-                 aa    = (1.0+w*(B1+w*(B2+w*(B3+w*(B4+w*(B5+w*B6))))));
-                 aa *= aa*aa*aa;
-                 erfc  = 1.0/(aa*aa*aa*aa);
-                 adiff = zz*(erfc+CERFC*w*exp(-w*w))/(r*r*r);
-                 sw1 += x*adiff;
-                 sw2 += y*adiff;
-                 sw3 += z*adiff;
-              }
-              fion[3*ii]   += sw1;
-              fion[3*ii+1] += sw2;
-              fion[3*ii+2] += sw3;
-              fion[3*jj]   -= sw1;
-              fion[3*jj+1] -= sw2;
-              fion[3*jj+2] -= sw3;
+        	  if (icount==taskid)
+        	  {
+                 dx=r1[3*ii]   - r1[3*jj];
+                 dy=r1[3*ii+1] - r1[3*jj+1];
+                 dz=r1[3*ii+2] - r1[3*jj+2];
+                 zz=zv[katm[ii]]*zv[katm[jj]];
+                 sw1=0.0; sw2=0.0; sw3=0.0;
+                 for (l=0; l<nsh; ++l)
+                 {
+                    x=rcell[l]        +dx;
+                    y=rcell[l+nsh]    +dy;
+                    z=rcell[l+nsh+nsh]+dz;
+                    r=sqrt(x*x+y*y+z*z);
+                    w=r/rcut;
+                    aa    = (1.0+w*(B1+w*(B2+w*(B3+w*(B4+w*(B5+w*B6))))));
+                    aa *= aa*aa*aa;
+                    erfc  = 1.0/(aa*aa*aa*aa);
+                    adiff = zz*(erfc+CERFC*w*exp(-w*w))/(r*r*r);
+                    sw1 += x*adiff;
+                    sw2 += y*adiff;
+                    sw3 += z*adiff;
+                 }
+                 fion[3*ii]   += sw1;
+                 fion[3*ii+1] += sw2;
+                 fion[3*ii+2] += sw3;
+                 fion[3*jj]   -= sw1;
+                 fion[3*jj+1] -= sw2;
+                 fion[3*jj+2] -= sw3;
+        	  }
+        	  icount = (icount+1)%np;
            }/*jj*/
 
         }/*ii*/
      }/*move*/
-
- 
+     Parallel_Vector_SumAll(3*nion,fion);
 
 
       /* local pseudo-, hartree-, exchange-correlation potentials  */
@@ -377,9 +391,10 @@ void cpsd(const int inner,
          vtmp[kk+1] = vall[kk+1]*scal2 + dng[kk+1]*vc[k];
          kk += 2;
       }
-      cr_fft3b_(vtmp,
-                &inc2c,&inc3c,&inc2r,&inc3r, 
-                &nfft,&nfft,&nfft,aux,&naux);
+      //cr_fft3b_(vtmp,
+      //          &inc2c,&inc3c,&inc2r,&inc3r,
+      //          &nfft,&nfft,&nfft,aux,&naux);
+      d3db_cr_fft3b(vtmp,tmp2,tmp3);
 
       for (ms=0; ms<ispin; ++ms)
          for (i=n1[ms]; i<=n2[ms]; ++i)
@@ -387,9 +402,10 @@ void cpsd(const int inner,
             for (k=0; k<n2ft3d; ++k) 
                cpsi[k+i*n2ft3d] *= (vtmp[k] + xcp[k+ms*n2ft3d]);
 
-            rc_fft3f_(&cpsi[i*n2ft3d],
-                      &inc2c,&inc3c,&inc2r,&inc3r,
-                      &nfft,&nfft,&nfft,aux,&naux);
+            //rc_fft3f_(&cpsi[i*n2ft3d],
+            //          &inc2c,&inc3c,&inc2r,&inc3r,
+            //          &nfft,&nfft,&nfft,aux,&naux);
+            d3db_rc_fft3f(&cpsi[i*n2ft3d],tmp2,tmp3);
 
             for (k=0; k<n2ft3d; ++k) 
                cpsi[k+i*n2ft3d] = -scal1*cpsi[k+i*n2ft3d]*masker[k] + c2[k+i*n2ft3d];
@@ -419,22 +435,26 @@ void cpsd(const int inner,
          rex  = &c2[ms*ne[0]*n2ft3d];
          for (i=0; i<ne[ms]; ++i)
          {
-            s22[i+i*ne[ms]] = (1.0-gcdotc(nfft,&rex[i*n2ft3d],&rex[i*n2ft3d]))*0.5/dte;
-            s21[i+i*ne[ms]] = (1.0-gcdotc(nfft,&rex[i*n2ft3d],&rex1[i*n2ft3d]))*0.5;
+            s22[i+i*ne[ms]] = (1.0-d3db_cc_idot(&rex[i*n2ft3d],&rex[i*n2ft3d]))*0.5/dte;
+            s21[i+i*ne[ms]] = (1.0-d3db_cc_idot(&rex[i*n2ft3d],&rex1[i*n2ft3d]))*0.5;
             s12[i+i*ne[ms]] = s21[i+i*ne[ms]];
-            s11[i+i*ne[ms]] = -gcdotc(nfft,&rex1[i*n2ft3d],&rex1[i*n2ft3d])*0.5*dte;
+            s11[i+i*ne[ms]] = -d3db_cc_idot(&rex1[i*n2ft3d],&rex1[i*n2ft3d])*0.5*dte;
             for (j=i+1; j<ne[ms]; ++j)
             {
-               s22[i+j*ne[ms]] = -gcdotc(nfft,&rex[i*n2ft3d], &rex[j*n2ft3d]) *0.5/dte;
-               s21[i+j*ne[ms]] = -gcdotc(nfft,&rex[i*n2ft3d], &rex1[j*n2ft3d])*0.5;
-               s12[i+j*ne[ms]] = -gcdotc(nfft,&rex1[i*n2ft3d],&rex[j*n2ft3d]) *0.5;
-               s11[i+j*ne[ms]] = -gcdotc(nfft,&rex1[i*n2ft3d],&rex1[j*n2ft3d])*0.5*dte;
+               s22[i+j*ne[ms]] = -d3db_cc_idot(&rex[i*n2ft3d], &rex[j*n2ft3d]) *0.5/dte;
+               s21[i+j*ne[ms]] = -d3db_cc_idot(&rex[i*n2ft3d], &rex1[j*n2ft3d])*0.5;
+               s12[i+j*ne[ms]] = -d3db_cc_idot(&rex1[i*n2ft3d],&rex[j*n2ft3d]) *0.5;
+               s11[i+j*ne[ms]] = -d3db_cc_idot(&rex1[i*n2ft3d],&rex1[j*n2ft3d])*0.5*dte;
                s22[j+i*ne[ms]] = s22[i+j*ne[ms]];
                s21[j+i*ne[ms]] = s21[i+j*ne[ms]];
                s12[j+i*ne[ms]] = s12[i+j*ne[ms]];
                s11[j+i*ne[ms]] = s11[i+j*ne[ms]];
             }
          }
+         Parallel_Vector_SumAll(ne[ms]*ne[ms],s22);
+         Parallel_Vector_SumAll(ne[ms]*ne[ms],s21);
+         Parallel_Vector_SumAll(ne[ms]*ne[ms],s12);
+         Parallel_Vector_SumAll(ne[ms]*ne[ms],s11);
        
          ii   = 0;
          done = 0;
@@ -503,11 +523,11 @@ void cpsd(const int inner,
 
       for (i=0;i<ne[ms]; ++i)
       {
-         qex[i+i*ne[ms]] = -gcdotc(nfft,&rex[i*n2ft3d],&rex1[i*n2ft3d]);
+         qex[i+i*ne[ms]] = -d3db_cc_dot(&rex[i*n2ft3d],&rex1[i*n2ft3d]);
          eorbit += hml[i+i*ne[ms]];
          for (j=i+1;j<ne[ms]; ++j)
          {
-            qex[i+j*ne[ms]] = -gcdotc(nfft,&rex[i*n2ft3d],&rex1[j*n2ft3d]);
+            qex[i+j*ne[ms]] = -d3db_cc_dot(&rex[i*n2ft3d],&rex1[j*n2ft3d]);
             qex[j+i*ne[ms]] = hml[i+j*ne[ms]];
          }
       }
@@ -523,7 +543,8 @@ void cpsd(const int inner,
       vtmp[k] = (s[kk]*s[kk] + s[kk+1]*s[kk+1])*vg[k];
       kk += 2;
    }
-   eion = gssum(nfft,vtmp) * 0.5*scal2 + cewald;
+   //eion = gssum(nfft,vtmp) * 0.5*scal2 + cewald;
+   eion = d3db_t_sum(vtmp) * 0.5*scal2 + cewald;
    for (ii=0;    ii<nion; ++ii)
    for (jj=ii+1; jj<nion; ++jj)
    {
@@ -551,7 +572,7 @@ void cpsd(const int inner,
       vtmp[k] = (dng[kk]*dng[kk] + dng[kk+1]*dng[kk+1])*vc[k];
       kk += 2;
    }
-   ehartr=gssum(nfft,vtmp)*omega*0.5;
+   ehartr=d3db_t_sum(vtmp)*omega*0.5;
 
    /* exchange-correlation energy */
    exc=edot(&n2ft3d,dn,&one,xce,&one);
@@ -582,12 +603,12 @@ void cpsd(const int inner,
          vtmp[kk+1] = rex[kk+1]*tg[k];
          kk += 2;
       }
-      eke += gcdotc(nfft,rex,vtmp);
+      eke += d3db_cc_dot(rex,vtmp);
    }
    if (ispin==1) eke = 2*eke;
 
    /* Kohn-Sham V_local energy */
-   elocal = gcdotc(nfft,vall,dng);
+   elocal = d3db_cc_dot(vall,dng);
 
    /* get non-local psp energy */
    enlocal = 0.0;
@@ -626,7 +647,7 @@ void cpsd(const int inner,
          }
          for (i=0; i<(ne[0]+ne[1]); ++i)
          {
-            sw1 = gcdotc(nfft,vtmp,&c1[i*n2ft3d]);
+            sw1 = d3db_cc_dot(vtmp,&c1[i*n2ft3d]);
             enlocal += sw1*sw1*scal2/vnlnrm[ia*9 +l];
          }
       }
@@ -653,7 +674,7 @@ void cpsd(const int inner,
    *deltac = 0.0;
    for (i=0; i<(ne[0]+ne[1]); ++i)
    {
-      adiff = gcdotc(nfft,&cpsi[i*n2ft3d],&cpsi[i*n2ft3d]);
+      adiff = d3db_cc_dot(&cpsi[i*n2ft3d],&cpsi[i*n2ft3d]);
       if (adiff > (*deltac))
          *deltac = adiff;
    }

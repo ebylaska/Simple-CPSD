@@ -30,6 +30,8 @@
 #define ecffti  cffti_
 #define erfftb  rfftb_
 #define ecfftb  cfftb_
+#define erfftf  rfftf_
+#define ecfftf  cfftf_
 #define MPI_REAL_PRECISION MPI_FLOAT
 */
 
@@ -59,6 +61,8 @@
 #define ecffti  dcffti_
 #define erfftb  drfftb_
 #define ecfftb  dcfftb_
+#define erfftf  drfftf_
+#define ecfftf  dcfftf_
 #define MPI_REAL_PRECISION MPI_DOUBLE_PRECISION
 
 

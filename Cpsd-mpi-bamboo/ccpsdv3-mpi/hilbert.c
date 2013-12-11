@@ -25,12 +25,9 @@ $Id: hilbert.c 20283 2011-05-05 19:21:51Z d3p852 $
 int     hilbert2d(int i, int j, int level);
 int     hilbert_dir(int i, int j, int level, int high, int* start);
 
-void hilbert2d_map_c(int sizex,int sizey,int map[]) { hilbert2d_map(&sizex,&sizey,map); }
 
 
-void hilbert2d_map(sizex_ptr,sizey_ptr,map)
-int     *sizex_ptr,*sizey_ptr;
-int     map[];
+void hilbert2d_map(int *sizex_ptr,int *sizey_ptr,int map[])
 {
     int i,j,size,sizex,sizey;
     int ii,jj,iii,jjj;
@@ -111,6 +108,7 @@ int     map[];
    free(map2);
 
 }
+
 
 
 int     hilbert2d(i,j,level)
@@ -262,3 +260,6 @@ int     *start;
 
    return direction;
 }
+
+void hilbert2d_map_c(int sizex,int sizey,int map[]) { hilbert2d_map(&sizex,&sizey,map); }
+

@@ -33,22 +33,34 @@ void Parallel_end()
 
 void Parallel_ibcast(int psend, int sz, int *ivalue)
 {
-   if (MPI_Bcast(ivalue,sz,MPI_INTEGER,psend,MPI_COMM_WORLD)!=MPI_SUCCESS)
-      printf("Parallel_ibcast error: MPI_Bcast failed\n");
+   if (np>1)
+      if (MPI_Bcast(ivalue,sz,MPI_INTEGER,psend,MPI_COMM_WORLD)!=MPI_SUCCESS)
+         printf("Parallel_ibcast error: MPI_Bcast failed\n");
 }
 
 void Parallel_rbcast(int psend, int sz, REAL *value)
 {
-   if (MPI_Bcast(value,sz,MPI_REAL_PRECISION,psend,MPI_COMM_WORLD)!=MPI_SUCCESS)
-      printf("Parallel_rbcast error: MPI_Bcast failed\n");
+   if (np>1)
+      if (MPI_Bcast(value,sz,MPI_REAL_PRECISION,psend,MPI_COMM_WORLD)!=MPI_SUCCESS)
+         printf("Parallel_rbcast error: MPI_Bcast failed\n");
 }
 
 
 REAL Parallel_SumAll(REAL value_in)
 {
    REAL value_out=0.0;
-   if (MPI_Allreduce(&value_in,&value_out,1,MPI_REAL_PRECISION,MPI_SUM,MPI_COMM_WORLD)!=MPI_SUCCESS)
-      printf("Parallel_SumAll error: MPI_Allreduce failed\n");
+   if (np>1)
+      if (MPI_Allreduce(&value_in,&value_out,1,MPI_REAL_PRECISION,MPI_SUM,MPI_COMM_WORLD)!=MPI_SUCCESS)
+         printf("Parallel_SumAll error: MPI_Allreduce failed\n");
 
    return value_out;
 }
+
+
+void Parallel_Vector_SumAll(int n, REAL *values_in)
+{
+   if (np>1)
+      if (MPI_Allreduce(MPI_IN_PLACE,values_in,n,MPI_REAL_PRECISION,MPI_SUM,MPI_COMM_WORLD)!=MPI_SUCCESS)
+         printf("Parallel_Vector_SumAll error: MPI_Allreduce failed\n");
+}
+
