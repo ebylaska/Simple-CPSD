@@ -345,6 +345,7 @@ main(int argc, char *argv[])
 
       fread( &vl[ia*nfft3d],   sizeof(REAL),nfft3d,fp);
       fread( &vnl[ia*nfft3d*9],sizeof(REAL),lmmax[ia]*nfft3d,fp);
+
       if (Parallel_taskid==0)
          fclose(fp);
    }

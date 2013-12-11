@@ -33,6 +33,7 @@ REAL d3db_tt_idot(const REAL*, const REAL*);
 REAL d3db_t_sum(const REAL*);
 
 void d3db_c_read(FILE*, REAL*, REAL*, REAL*);
+void d3db_t_read(FILE*, REAL*, REAL*, REAL*);
 void d3db_c_write(FILE*, REAL*, REAL*, REAL*);
 
 #endif /* D3DB_H_ */

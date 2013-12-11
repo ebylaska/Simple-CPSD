@@ -1854,6 +1854,93 @@ void d3db_c_read(FILE *fp, REAL A[], REAL tmp[], REAL tmp2[])
 
 
 
+
+
+/***********************************
+ *					               *
+ *	         d3db_t_read  	       *
+ *					               *
+ ***********************************
+
+*/
+void d3db_t_read(FILE *fp, REAL A[], REAL tmp[], REAL tmp2[])
+{
+   int j,k,q,p_to,p_here;
+   int taskid = Parallel_taskid();
+   int np     = Parallel_np();
+   int one = 1;
+   int nn = (nx/2+1)*ny;
+   int n  = (nx/2+1);
+   int msgtype = 89;
+
+   if (mapping==1)
+   {
+      /**** master node reads from file and distributes */
+      if (taskid==0)
+      {
+         for (k=0; k<nz; ++k)
+         {
+        	 fread(tmp,sizeof(REAL),nn,fp);
+        	 d3db_ktoqp(k,&q,&p_to);
+             if (p_to==0)
+                ecopy(&nn,tmp,&one,&A[q*nn],&one);
+             else
+                if (MPI_Send(tmp,nn,MPI_REAL_PRECISION,
+            			      p_to,msgtype,MPI_COMM_WORLD)!=MPI_SUCCESS)
+            		 printf("d3db_c_read error: MPI_Send failed\n");
+         }
+      }
+      else
+      {
+    	  for (k=0; k<nz; ++k)
+    	  {
+    	     d3db_ktoqp(k,&q,&p_here);
+    	     if (p_here==taskid)
+                if (MPI_Recv(&A[q*nn],nn,MPI_REAL_PRECISION,0,msgtype,MPI_COMM_WORLD,MPI_STATUS_IGNORE)!=MPI_SUCCESS)
+                   printf("d3db_c_read error: MPI_Recv failed\n");
+    	  }
+      }
+   }
+
+   /* hilbert mapping */
+   else
+   {
+      if (taskid==0)
+      {
+	     for (k=0; k<nz; ++k)
+         for (j=0; j<ny; ++j)
+         {
+            fread(tmp,sizeof(REAL),n,fp);
+            q    = q_map1[j+k*ny];
+            p_to = p_map1[j+k*ny];
+            if (p_to==0)
+               ecopy(&n,tmp,&one,&A[q*n],&one);
+            else
+               if (MPI_Send(tmp,n,MPI_REAL_PRECISION,
+            		     p_to,msgtype,MPI_COMM_WORLD)!=MPI_SUCCESS)
+                  printf("d3db_c_read error: MPI_Send failed\n");
+         }
+      }
+      else
+      {
+    	 for (k=0; k<nz; ++k)
+         for (j=0; j<ny; ++j)
+         {
+             q      = q_map1[j+k*ny];
+             p_here = p_map1[j+k*ny];
+             if (p_here==taskid)
+                if (MPI_Recv(&A[q*n],n,MPI_REAL_PRECISION,0,msgtype,MPI_COMM_WORLD,MPI_STATUS_IGNORE)!=MPI_SUCCESS)
+                   printf("d3db_c_read error: MPI_Recv failed\n");
+      	  }
+      }
+      d3db_t_transpose_ijk(5,A,tmp,tmp2);
+   }
+
+}
+
+
+
+
 /***********************************
  *					               *
  *	         d3db_c_write  	       *
