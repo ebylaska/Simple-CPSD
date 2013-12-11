@@ -482,7 +482,7 @@ static void d3db_c_transpose_ijk_init()
 	int np     = Parallel_np();
 
    /*********************************************************
-    **** map1to2 mapping - done - transpose operation #1 ****
+    **** map1to2 mapping - done - transpose operation #0 ****
     *********************************************************/
    h_iq_to_i1[0] = (int *) malloc((nx/2+1)*nq1*sizeof(int));
    h_iq_to_i2[0] = (int *) malloc(ny*nq2*sizeof(int));
@@ -529,7 +529,7 @@ static void d3db_c_transpose_ijk_init()
 
 
    /*********************************************************
-    **** map2to3 mapping - done - transpose operation #2 ****
+    **** map2to3 mapping - done - transpose operation #1 ****
     *********************************************************/
    h_iq_to_i1[1] = (int *) malloc(ny*nq2*sizeof(int));
    h_iq_to_i2[1] = (int *) malloc(nz*nq3*sizeof(int));
@@ -576,7 +576,7 @@ static void d3db_c_transpose_ijk_init()
 
 
    /*********************************************************
-    **** map3to2 mapping - done - transpose operation #3 ****
+    **** map3to2 mapping - done - transpose operation #2 ****
     *********************************************************/
    h_iq_to_i1[2] = (int *) malloc(nz*nq3*sizeof(int));
    h_iq_to_i2[2] = (int *) malloc(ny*nq2*sizeof(int));
@@ -623,7 +623,7 @@ static void d3db_c_transpose_ijk_init()
 
 
    /*********************************************************
-    **** map2to1 mapping - done - transpose operation #4 ****
+    **** map2to1 mapping - done - transpose operation #3 ****
     *********************************************************/
    h_iq_to_i1[3] = (int *) malloc(ny*nq2*sizeof(int));
    h_iq_to_i2[3] = (int *) malloc((nx/2+1)*nq1*sizeof(int));
@@ -670,7 +670,7 @@ static void d3db_c_transpose_ijk_init()
 
 
    /***********************************************************
-    **** map1to3 mapping  - done - transpose operation # 5 ****
+    **** map1to3 mapping  - done - transpose operation #4  ****
     ***********************************************************/
    h_iq_to_i1[4] = (int *) malloc((nx/2+1)*nq1*sizeof(int));
    h_iq_to_i2[4] = (int *) malloc(nz*nq3*sizeof(int));
@@ -716,9 +716,9 @@ static void d3db_c_transpose_ijk_init()
    h_i2_start[4][np] = index2;
 
 
-   /*************************
-    **** map3to1 mapping ****
-    *************************/
+   /**************************************************
+    **** map3to1 mapping - transpose operation #5 ****
+    **************************************************/
    h_iq_to_i1[5] = (int *) malloc(nz*nq3*sizeof(int));
    h_iq_to_i2[5] = (int *) malloc((nx/2+1)*nq1*sizeof(int));
    h_i1_start[5] = (int *) malloc((np+1)*sizeof(int));
@@ -907,19 +907,17 @@ static void d3db_c_transpose_ijk(int op, REAL A[], REAL tmp1[], REAL tmp2[])
    int i,it,proc_to,proc_from,msgtype,msglen,nnfft3d;
    int reqcnt;
    MPI_Request *request;
-   MPI_Status  *status;
 
    int taskid = Parallel_taskid();
    int np     =  Parallel_np();
 
    request = (MPI_Request *) malloc(np*sizeof(MPI_Request));
-   status  = (MPI_Status *)  malloc(4*np*sizeof(MPI_Status));
 
 
    /* pack A(i) array */
-   if ((op==1)||(op==5)) nnfft3d = (nx/2+1)*nq1;
-   if ((op==2)||(op==4)) nnfft3d = (ny)    *nq2;
-   if ((op==3)||(op==6)) nnfft3d = (nz)    *nq3;
+   if ((op==0)||(op==4)) nnfft3d = (nx/2+1)*nq1;
+   if ((op==1)||(op==3)) nnfft3d = (ny)    *nq2;
+   if ((op==2)||(op==5)) nnfft3d = (nz)    *nq3;
 
    for (i=0; i<nnfft3d; ++i)
    {
@@ -967,13 +965,13 @@ static void d3db_c_transpose_ijk(int op, REAL A[], REAL tmp1[], REAL tmp2[])
 
    /* wait for completion of mp_send, also do a sync */
    if (np>1)
-      if (MPI_Waitall(reqcnt,request,status) != MPI_SUCCESS)
+      if (MPI_Waitall(reqcnt,request,MPI_STATUS_IGNORE) != MPI_SUCCESS)
          printf("d3db_c_transpose_ijk error: MPI_Waitall failed\n");
 
    /* unpack A(i) array */
-   if ((op==4)||(op==6)) nnfft3d = (nx/2+1)*nq1;
-   if ((op==1)||(op==3)) nnfft3d = (ny)    *nq2;
-   if ((op==2)||(op==5)) nnfft3d = (nz)    *nq3;
+   if ((op==3)||(op==5)) nnfft3d = (nx/2+1)*nq1;
+   if ((op==0)||(op==2)) nnfft3d = (ny)    *nq2;
+   if ((op==1)||(op==4)) nnfft3d = (nz)    *nq3;
 
    for (i=0; i<nnfft3d; ++i)
    {
@@ -981,7 +979,6 @@ static void d3db_c_transpose_ijk(int op, REAL A[], REAL tmp1[], REAL tmp2[])
       A[2*i+1] = tmp2[2*h_iq_to_i2[op][i]+1];
    }
    free(request);
-   free(status);
 }
 
 
@@ -1003,18 +1000,16 @@ static void d3db_t_transpose_ijk(int op, REAL A[], REAL tmp1[], REAL tmp2[])
    int i,it,proc_to,proc_from,msgtype,msglen,nnfft3d;
    int reqcnt;
    MPI_Request *request;
-   MPI_Status  *status;
 
    int taskid = Parallel_taskid();
    int np     =  Parallel_np();
 
    request = (MPI_Request *) malloc(np*sizeof(MPI_Request));
-   status  = (MPI_Status *)  malloc(4*np*sizeof(MPI_Status));
 
    /* pack A(i) array */
-   if ((op==1)||(op==5)) nnfft3d = (nx/2+1)*nq1;
-   if ((op==2)||(op==4)) nnfft3d = (ny)    *nq2;
-   if ((op==3)||(op==6)) nnfft3d = (nz)    *nq3;
+   if ((op==0)||(op==4)) nnfft3d = (nx/2+1)*nq1;
+   if ((op==1)||(op==3)) nnfft3d = (ny)    *nq2;
+   if ((op==2)||(op==5)) nnfft3d = (nz)    *nq3;
 
    for (i=0; i<nnfft3d; ++i)
       tmp1[h_iq_to_i1[op][i]] = A[i];
@@ -1059,18 +1054,17 @@ static void d3db_t_transpose_ijk(int op, REAL A[], REAL tmp1[], REAL tmp2[])
 
    /* wait for completion of mp_send, also do a sync */
    if (np>1)
-      if (MPI_Waitall(reqcnt,request,status) != MPI_SUCCESS)
+      if (MPI_Waitall(reqcnt,request,MPI_STATUS_IGNORE) != MPI_SUCCESS)
          printf("d3db_t_transpose_ijk error: MPI_Waitall failed\n");
 
    /* unpack A(i) array */
-   if ((op==4)||(op==6)) nnfft3d = (nx/2+1)*nq1;
-   if ((op==1)||(op==3)) nnfft3d = (ny)    *nq2;
-   if ((op==2)||(op==5)) nnfft3d = (nz)    *nq3;
+   if ((op==3)||(op==5)) nnfft3d = (nx/2+1)*nq1;
+   if ((op==0)||(op==2)) nnfft3d = (ny)    *nq2;
+   if ((op==1)||(op==4)) nnfft3d = (nz)    *nq3;
 
    for (i=0; i<nnfft3d; ++i)
 	   A[i] = tmp2[h_iq_to_i2[op][i]];
    free(request);
-   free(status);
 }
 
 
@@ -1208,7 +1202,7 @@ void d3db_cr_fft3b(REAL A[], REAL tmp2[], REAL tmp3[])
    if (mapping==1)
    {
       /* Do a transpose of A, A(kx,kz,ky) <- A(kx,ky,kz) */
-      d3db_c_transpose_jk(A,tmp2,tmp3);
+      //d3db_c_transpose_jk(A,tmp2,tmp3);
 
 
       /* fft along kz dimension, A(kx,nz,ky) <- fft1d^(-1)[A(kx,kz,ky)] */
@@ -1284,11 +1278,11 @@ void d3db_cr_fft3b(REAL A[], REAL tmp2[], REAL tmp3[])
    {
        /* fft along kz dimension, A(nz,kx,ky) <- fft1d^(-1)[A(kz,kx,ky)] */
       d3db_fftbz_sub2(nq3,nz,tmpz,A);
-      d3db_c_transpose_ijk(3,A,tmp2,tmp3);
+      d3db_c_transpose_ijk(2,A,tmp2,tmp3);
 
       /* fft along ky dimension,A(ny,nz,kx) <- fft1d^(-1)[A(ky,nz,kx)] */
       d3db_fftby_sub2(nq2,ny,tmpy,A);
-      d3db_c_transpose_ijk(4,A,tmp2,tmp3);
+      d3db_c_transpose_ijk(3,A,tmp2,tmp3);
 
       /* fft along kx dimension, A(nx,ny,nz) <- fft1d^(-1)[A(kx,ny,nz)] */
       cshift1_fftb(nx,nq1,1,1,A);
@@ -1405,7 +1399,7 @@ void d3db_rc_fft3f(REAL A[], REAL tmp2[], REAL tmp3[])
       }
 
       /* transpose of A - A(kx,ky,kz) <- A(kx,kz,ky) */
-     d3db_c_transpose_jk(A,tmp2,tmp3);
+     //d3db_c_transpose_jk(A,tmp2,tmp3);
    }
 
    /* hilbert mapping */
@@ -1420,7 +1414,7 @@ void d3db_rc_fft3f(REAL A[], REAL tmp2[], REAL tmp3[])
 	  }
 	  cshift_fftf(nx,nq1,1,1,A);
 
-	  d3db_c_transpose_ijk(1,A,tmp2,tmp3);
+	  d3db_c_transpose_ijk(0,A,tmp2,tmp3);
 
 	  /* fft along ny dimension - A(ky,nz,kx) <- fft1d[A(ny,nz,kx)] */
       indx = 0;
@@ -1430,7 +1424,7 @@ void d3db_rc_fft3f(REAL A[], REAL tmp2[], REAL tmp3[])
     	  indx += ny;
       }
 
-      d3db_c_transpose_ijk(2,A,tmp2,tmp3);
+      d3db_c_transpose_ijk(1,A,tmp2,tmp3);
 
       /* fft along nz dimension - A(kz,kx,ky) <- fft1d[A(nz,kx,ky)] */
       indx = 0;
@@ -1444,6 +1438,44 @@ void d3db_rc_fft3f(REAL A[], REAL tmp2[], REAL tmp3[])
 
 }
 
+
+/***********************************
+ *					               *
+ *	      d3db_r_zero_ends         *
+ *					               *
+ ***********************************
+
+*/
+void d3db_r_zero_ends(REAL A[])
+{
+   int j,k,q,indx1,indx2,p1,p2,taskid;
+
+   /* slab mapping */
+   if (mapping==1)
+   {
+      for (q=0; q<nq; ++q)
+      for (j=0; j<ny; ++j)
+      {
+         indx1      = nx + j*(nx+2) + q*(nx+2)*ny;
+         A[indx1]   = 0.0;
+         A[indx1+1] = 0.0;
+      }
+   }
+   /* hilbert mapping */
+   else
+   {
+	  taskid = Parallel_taskid();
+      for (k=0; k<nz; ++k)
+      for (j=0; j<ny; ++j)
+      {
+    	  d3db_ijktoindex2p(nx,  j,k,&indx1,&p1);
+    	  if (p1==taskid) A[indx1] = 0.0;
+
+    	  d3db_ijktoindex2p(nx+1,j,k,&indx2,&p2);
+    	  if (p2==taskid) A[indx2] = 0.0;
+      }
+   }
+}
 
 
 /***********************************
@@ -1847,7 +1879,7 @@ void d3db_c_read(FILE *fp, REAL A[], REAL tmp[], REAL tmp2[])
                    printf("d3db_c_read error: MPI_Recv failed\n");
       	  }
       }
-      d3db_c_transpose_ijk(5,A,tmp,tmp2);
+      d3db_c_transpose_ijk(4,A,tmp,tmp2);
    }
 
 }
@@ -1933,7 +1965,7 @@ void d3db_t_read(FILE *fp, REAL A[], REAL tmp[], REAL tmp2[])
                    printf("d3db_c_read error: MPI_Recv failed\n");
       	  }
       }
-      d3db_t_transpose_ijk(5,A,tmp,tmp2);
+      d3db_t_transpose_ijk(4,A,tmp,tmp2);
    }
 
 }
@@ -1999,7 +2031,7 @@ void d3db_c_write(FILE *fp, REAL A[], REAL tmp[], REAL tmp2[])
    /* hilbert mapping */
    else
    {
-      d3db_c_transpose_ijk(6,A,tmp,tmp2);
+      d3db_c_transpose_ijk(5,A,tmp,tmp2);
 
       if (taskid==0)
       {

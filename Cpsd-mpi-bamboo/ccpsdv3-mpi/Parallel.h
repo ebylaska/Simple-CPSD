@@ -20,5 +20,5 @@ extern void Parallel_ibcast(int, int, int*);
 extern void Parallel_rbcast(int, int, REAL*);
 
 REAL Parallel_SumAll(REAL);
-void Parallel_Vector_SumAll(int, REAL*);
+void Parallel_Vector_SumAll(const int, REAL*);
 #endif /* PARALLEL_H_ */

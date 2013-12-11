@@ -1,3 +1,11 @@
+/*
+ * cpsd.c
+ *
+ *  Created on: Dec 5, 2013
+ *      Author: bylaska
+ *
+ */
+
 #include	<stdlib.h>
 #include	<math.h>
 #include	<stdio.h>
@@ -26,8 +34,8 @@
 //extern REAL gsdot(const int nfft, const REAL *psi1, const REAL *psi2);
 //extern REAL gcdotc(const int nfft, const REAL *psi1, const REAL *psi2);
 
-extern void phafac(const int nfft,const REAL pi, const REAL *unitg,const int nion,const REAL *r1,REAL *ex1,REAL *ex2,REAL *ex3);
-extern void strfac(const int nfft, const REAL *ex1, const REAL *ex2, const REAL *ex3, REAL *exi);
+extern void phafac(const REAL pi, const REAL *unitg,const int nion,const REAL *r1,REAL *ex1,REAL *ex2,REAL *ex3);
+extern void strfac(const REAL *ex1, const REAL *ex2, const REAL *ex3, REAL *exi);
 
 
 
@@ -73,7 +81,7 @@ void cpsd(const int inner,
 {
    int i,j,k,l,ia,ii,jj,kk,ms,itime,kc,kr,ir,jr,done;
    int nion3,nn,inc2c,inc3c,inc2r,inc3r,naux;
-   int one,zero,n2ft3d2,nfft2,nffth;
+   int one,zero,n2ft3d2,nffth;
    int n1[2],n2[2];
    REAL *dti,*aux,*dng,*vall,*s,*vtmp,*xcp,*xce,*tmp2,*tmp3;
    REAL *ex1,*ex2,*ex3,*rex,*rex1,*qex,*exi;
@@ -93,7 +101,6 @@ void cpsd(const int inner,
    /*  CONSTANTS */
    tch1 = 'N';
    n2ft3d2 = ispin*n2ft3d;
-   nfft2   = nfft*nfft;
    nffth   = nfft/2;
    nn      = n2ft3d*(ne[0]+ne[1]);
    nion3   = 3*nion;
@@ -197,8 +204,7 @@ void cpsd(const int inner,
             for (k=0; k<n2ft3d; ++k) 
                dn[k+ms*n2ft3d] += scal2*(cpsi[k+i*n2ft3d]*cpsi[k+i*n2ft3d]);
 
-         ecopy(&nfft2,&rzero,&zero,&dn[nfft  +ms*n2ft3d],&inc2r);
-         ecopy(&nfft2,&rzero,&zero,&dn[nfft+1+ms*n2ft3d],&inc2r);
+         //d3db_r_zero_ends(&dn[ms*n2ft3d]);
       }
 
       /* wavefunctions in the coordination spaceJ - fftpack3d -  complex to real fft */
@@ -214,7 +220,7 @@ void cpsd(const int inner,
       for (k=0; k<n2ft3d; ++k) dng[k] *= masker[k];
 
       /* phase factor of ion positions */
-      phafac(nfft,pi,unitg,nion,r1,ex1,ex2,ex3);
+      phafac(pi,unitg,nion,r1,ex1,ex2,ex3);
 
 
       /*  kinetic energy */
@@ -238,7 +244,7 @@ void cpsd(const int inner,
          ia = katm[ii];
 
          /* structure factor and local pseudopotential */
-         strfac(nfft,&ex1[ii*(nfft+2)],&ex2[ii*2*nfft],&ex3[ii*2*nfft],exi);
+         strfac(&ex1[ii*(nfft+2)],&ex2[ii*2*nfft],&ex3[ii*2*nfft],exi);
          for (k=0; k<n2ft3d; ++k) exi[k] *= masker[k];
          eaxpy(&n2ft3d,&zv[ia],exi,&one,s,&one);
 
@@ -325,7 +331,7 @@ void cpsd(const int inner,
            ia = katm[ii];
 
            /* structure factor */
-           strfac(nfft,&ex1[ii*(nfft+2)],&ex2[ii*2*nfft],&ex3[ii*2*nfft],exi);
+           strfac(&ex1[ii*(nfft+2)],&ex2[ii*2*nfft],&ex3[ii*2*nfft],exi);
            for (k=0; k<n2ft3d; ++k) exi[k] *= masker[k];
 
            /* kspace ewald */
@@ -376,8 +382,8 @@ void cpsd(const int inner,
            }/*jj*/
 
         }/*ii*/
+        Parallel_Vector_SumAll(3*nion,fion);
      }/*move*/
-     Parallel_Vector_SumAll(3*nion,fion);
 
 
       /* local pseudo-, hartree-, exchange-correlation potentials  */
@@ -426,7 +432,6 @@ void cpsd(const int inner,
          }
       }
 
-
       /* Lagrangian multipliers */
       for (ms=0; ms<ispin; ++ms)
       {
@@ -435,16 +440,16 @@ void cpsd(const int inner,
          rex  = &c2[ms*ne[0]*n2ft3d];
          for (i=0; i<ne[ms]; ++i)
          {
-            s22[i+i*ne[ms]] = (1.0-d3db_cc_idot(&rex[i*n2ft3d],&rex[i*n2ft3d]))*0.5/dte;
-            s21[i+i*ne[ms]] = (1.0-d3db_cc_idot(&rex[i*n2ft3d],&rex1[i*n2ft3d]))*0.5;
+       	    s22[i+i*ne[ms]] = d3db_cc_idot(&rex[i*n2ft3d],&rex[i*n2ft3d]);
+            s21[i+i*ne[ms]] = d3db_cc_idot(&rex[i*n2ft3d],&rex1[i*n2ft3d]);
             s12[i+i*ne[ms]] = s21[i+i*ne[ms]];
-            s11[i+i*ne[ms]] = -d3db_cc_idot(&rex1[i*n2ft3d],&rex1[i*n2ft3d])*0.5*dte;
+            s11[i+i*ne[ms]] = d3db_cc_idot(&rex1[i*n2ft3d],&rex1[i*n2ft3d]);
             for (j=i+1; j<ne[ms]; ++j)
             {
-               s22[i+j*ne[ms]] = -d3db_cc_idot(&rex[i*n2ft3d], &rex[j*n2ft3d]) *0.5/dte;
-               s21[i+j*ne[ms]] = -d3db_cc_idot(&rex[i*n2ft3d], &rex1[j*n2ft3d])*0.5;
-               s12[i+j*ne[ms]] = -d3db_cc_idot(&rex1[i*n2ft3d],&rex[j*n2ft3d]) *0.5;
-               s11[i+j*ne[ms]] = -d3db_cc_idot(&rex1[i*n2ft3d],&rex1[j*n2ft3d])*0.5*dte;
+               s22[i+j*ne[ms]] = d3db_cc_idot(&rex[i*n2ft3d], &rex[j*n2ft3d]);
+               s21[i+j*ne[ms]] = d3db_cc_idot(&rex[i*n2ft3d], &rex1[j*n2ft3d]);
+               s12[i+j*ne[ms]] = d3db_cc_idot(&rex1[i*n2ft3d],&rex[j*n2ft3d]);
+               s11[i+j*ne[ms]] = d3db_cc_idot(&rex1[i*n2ft3d],&rex1[j*n2ft3d]);
                s22[j+i*ne[ms]] = s22[i+j*ne[ms]];
                s21[j+i*ne[ms]] = s21[i+j*ne[ms]];
                s12[j+i*ne[ms]] = s12[i+j*ne[ms]];
@@ -455,6 +460,26 @@ void cpsd(const int inner,
          Parallel_Vector_SumAll(ne[ms]*ne[ms],s21);
          Parallel_Vector_SumAll(ne[ms]*ne[ms],s12);
          Parallel_Vector_SumAll(ne[ms]*ne[ms],s11);
+
+
+         for (i=0; i<ne[ms]; ++i)
+         {
+            s22[i+i*ne[ms]] = (1.0-s22[i+i*ne[ms]])*0.5/dte;
+            s21[i+i*ne[ms]] = (1.0-s21[i+i*ne[ms]])*0.5;
+            s12[i+i*ne[ms]] = s21[i+i*ne[ms]];
+            s11[i+i*ne[ms]] = -s11[i+i*ne[ms]]*0.5*dte;
+            for (j=i+1; j<ne[ms]; ++j)
+            {
+               s22[i+j*ne[ms]] = -s22[i+j*ne[ms]]*0.5/dte;
+               s21[i+j*ne[ms]] = -s21[i+j*ne[ms]]*0.5;
+               s12[i+j*ne[ms]] = -s12[i+j*ne[ms]]*0.5;
+               s11[i+j*ne[ms]] = -s11[i+j*ne[ms]]*0.5*dte;
+               s22[j+i*ne[ms]] = s22[i+j*ne[ms]];
+               s21[j+i*ne[ms]] = s21[i+j*ne[ms]];
+               s12[j+i*ne[ms]] = s12[i+j*ne[ms]];
+               s11[j+i*ne[ms]] = s11[i+j*ne[ms]];
+            }
+         }
        
          ii   = 0;
          done = 0;
@@ -494,7 +519,7 @@ void cpsd(const int inner,
             else
                ecopy(&kk,sa1,&one,sa0,&one);
          }
-         if (!done) printf("ierr=10 adiff=%f\n",adiff);
+         if (!done) printf("ierr=10 adiff=%le\n",adiff);
          ecopy(&kk,sa1,&one,&lmd[ms*ne[0]*ne[0]],&one);
       }
 
@@ -589,7 +614,8 @@ void cpsd(const int inner,
    }
    exc *= dv;
    pxc *= dv;
-
+   exc = Parallel_SumAll(exc);
+   pxc = Parallel_SumAll(pxc);
 
    /* Kohn-Sham kinetic energy */
    eke = 0.0;
@@ -615,7 +641,7 @@ void cpsd(const int inner,
    for (ii=0; ii<nion; ++ii)
    {
       ia = katm[ii];
-      strfac(nfft,&ex1[ii*(nfft+2)],&ex2[ii*2*nfft],&ex3[ii*2*nfft],exi);
+      strfac(&ex1[ii*(nfft+2)],&ex2[ii*2*nfft],&ex3[ii*2*nfft],exi);
       for (k=0; k<n2ft3d; ++k) exi[k] *= masker[k];
 
       for (l=0; l<lmmax[ia]; ++l)

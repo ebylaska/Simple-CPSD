@@ -1,3 +1,11 @@
+/*
+ * main.c
+ *
+ *  Created on: Dec 5, 2013
+ *      Author: bylaska
+ *
+ */
+
 #include	<stdlib.h>
 #include	<stdio.h>
 #include	<math.h>
@@ -8,8 +16,8 @@
 
 /* define other routines */
 extern void get_cube(int itype, REAL unit, REAL *volume, REAL *unita, REAL *unitg);
-extern void get_g(int nfft,REAL *unitg, REAL *g);
-extern void get_masker(const int nfft, const REAL ggcut, const REAL *unitg, int *masker1);
+extern void get_g(REAL *unitg, REAL *g);
+extern void get_masker(const REAL ggcut, const REAL *unitg, int *masker1);
 //extern REAL gcdotc(const int nfft, const REAL *psi1, const REAL *psi2);
 //extern REAL gssum(const int nfft, const REAL *xdn);
 extern REAL current_second();
@@ -59,9 +67,9 @@ extern void cpsd(const int inner,
 
 main(int argc, char *argv[])
 {
-   int i,j,k,kk,l,n,ia,ii,ms,nn,one,zero,oprint,mapping;
+   int i,j,k,kk,l,n,ia,ii,ms,nn,one,zero,oprint,mapping,taskid,ismaster;
    int i1,i2,i3,nsh;
-   int nfft,nfft3d,n2ft3d;
+   int nx,ny,nz,nfft,nfft3d,n2ft3d,qzero,pzero;
    int ispin,imove,icube,inner,outer,ncut,icount,done;
    int nkatm,nion;
    int lmax0,icube0,nfft0,lwork,info;
@@ -101,7 +109,10 @@ main(int argc, char *argv[])
    rzero = 0.0;
 
    Parallel_init(&argc,&argv);
-   oprint = (Parallel_taskid()==0);
+   taskid   = Parallel_taskid();
+   oprint   = (taskid==0);
+   ismaster = (taskid==0);
+
 
    if (oprint)
    {
@@ -122,7 +133,7 @@ main(int argc, char *argv[])
    }
 
    /* read parameters and flags */
-   if (Parallel_taskid()==0)
+   if (ismaster)
    {
       fp = fopen("CONTROL","r");
       fscanf(fp,"%d %d", &ispin, &imove);
@@ -143,6 +154,7 @@ main(int argc, char *argv[])
    Parallel_ibcast(0,1,&icube);
    Parallel_ibcast(0,1,&inner);
    Parallel_ibcast(0,1,&outer);
+   Parallel_rbcast(0,1,&fmass);
    Parallel_rbcast(0,1,&unit);
    Parallel_rbcast(0,1,&dt);
    Parallel_rbcast(0,1,&tole);
@@ -151,7 +163,7 @@ main(int argc, char *argv[])
    Parallel_ibcast(0,1,&mapping);
 
    /* read in ELCIN header */
-   if (Parallel_taskid()==0)
+   if (ismaster)
    {
       fp = fopen("ELCIN","rb");
       fread(&icube,sizeof(int),1,fp);
@@ -170,6 +182,9 @@ main(int argc, char *argv[])
    d3db_init(nfft,nfft,nfft,mapping);
    nfft3d = d3db_nfft3d();
    n2ft3d = d3db_n2ft3d();
+   nx     = d3db_nx();
+   ny     = d3db_ny();
+   nz     = d3db_nz();
 
    /* allocate electronic data */
    //nfft3d = (nfft/2+1)*nfft*nfft;
@@ -187,13 +202,13 @@ main(int argc, char *argv[])
    work = (REAL *) malloc(lwork*sizeof(REAL));
 
    for (i=0; i<(ne[0]+ne[1]); ++i)
-      d3db_c_read(fp,&c2[i*n2ft3d],c1,cpsi);
+      d3db_c_read(fp,&c2[i*n2ft3d],xce,xcp);
 
    nn = (ne[0]+ne[1])*n2ft3d;
    //fread(c2,sizeof(REAL),nn,fp);
    ecopy(&nn,c2,&one,c1,&one);
 
-   if (Parallel_taskid()==0)
+   if (ismaster)
       fclose(fp);
 
    /* define lattice */
@@ -210,12 +225,12 @@ main(int argc, char *argv[])
 
    /* preparation of index vector */
    G  = (REAL *) malloc(3*nfft3d*sizeof(REAL));
-   get_g(nfft,unitg,G);
+   get_g(unitg,G);
 
    /* find cutoff energy */
-   gx=unitg[0]*(nfft/2);
-   gy=unitg[1]*(nfft/2);
-   gz=unitg[2]*(nfft/2);
+   gx=unitg[0]*(nx/2);
+   gy=unitg[1]*(ny/2);
+   gz=unitg[2]*(nz/2);
    gcut=gx*gx + gy*gy + gz*gz;
    ecut=0.50*gcut;
 
@@ -225,22 +240,28 @@ main(int argc, char *argv[])
    vc  = (REAL *) malloc(nfft3d*sizeof(REAL));
    vg  = (REAL *) malloc(nfft3d*sizeof(REAL));
    w = 0.25*rcut*rcut;
-   for (k=1; k<nfft3d; ++k)
+   d3db_ijktoindexp(0,0,0,&qzero,&pzero);
+   for (k=0; k<nfft3d; ++k)
    {
-      gg    = G[k]*G[k]+G[k+nfft3d]*G[k+nfft3d]+G[k+2*nfft3d]*G[k+2*nfft3d];
-      tg[k] = 0.5*gg;
-      vc[k] = fourpi/gg;
-      vg[k] = vc[k]*exp(-w*gg);
+	  if ((k==qzero)&&(pzero==taskid))
+	  {
+	     tg[k] = 0.0;
+	     vc[k] = 0.0;
+	     vg[k] = 0.0;
+	  }
+	  else
+	  {
+         gg    = G[k]*G[k]+G[k+nfft3d]*G[k+nfft3d]+G[k+2*nfft3d]*G[k+2*nfft3d];
+         tg[k] = 0.5*gg;
+         vc[k] = fourpi/gg;
+         vg[k] = vc[k]*exp(-w*gg);
+	  }
    }
-   tg[0] = 0.0; 
-   vc[0] = 0.0; 
-   vg[0] = 0.0;
-
 
    /* define the mask array */
    masker1= (int *) malloc(nfft3d*sizeof(int));
    masker = (int *) malloc(n2ft3d*sizeof(int));
-   get_masker(nfft,gcut,unitg,masker1);
+   get_masker(gcut,unitg,masker1);
    kk = 0;
    for (k=0; k<nfft3d; ++k)
    {
@@ -253,7 +274,7 @@ main(int argc, char *argv[])
    for (k=0; k<nfft3d; ++k) vg[k] *= masker1[k];
 
    /*  read ionic structure */
-   if (Parallel_taskid()==0)
+   if (ismaster)
    {
       fp = fopen("IONIN","r");
       fscanf(fp,"%d",&nkatm);
@@ -272,7 +293,7 @@ main(int argc, char *argv[])
       atom[ia]  = (char *) malloc(2*sizeof(char));
    }
 
-   if (Parallel_taskid()==0)
+   if (ismaster)
    {
      for (ia=0; ia<nkatm; ++ia)
      {
@@ -290,7 +311,7 @@ main(int argc, char *argv[])
    r1   = (REAL *) malloc(3*nion*sizeof(REAL));
    fion = (REAL *) malloc(3*nion*sizeof(REAL));
 
-   if (Parallel_taskid()==0)
+   if (ismaster)
    {
       for (ii=0; ii<nion; ++ii)
       {
@@ -319,7 +340,7 @@ main(int argc, char *argv[])
 
    for (ia=0; ia<nkatm; ++ia)
    {
-      if (Parallel_taskid()==0)
+      if (ismaster)
       {
          fp = fopen(fname[ia],"rb");
          fread(&icube0,sizeof(int),1,fp);
@@ -343,10 +364,13 @@ main(int argc, char *argv[])
       Parallel_ibcast(0,1,&lmax0);
       Parallel_rbcast(0,lmax0+1,rc[ia]);
 
-      fread( &vl[ia*nfft3d],   sizeof(REAL),nfft3d,fp);
-      fread( &vnl[ia*nfft3d*9],sizeof(REAL),lmmax[ia]*nfft3d,fp);
+      //fread( &vl[ia*nfft3d],   sizeof(REAL),nfft3d,fp);
+      //fread( &vnl[ia*nfft3d*9],sizeof(REAL),lmmax[ia]*nfft3d,fp);
+      d3db_t_read(fp,&vl[ia*nfft3d],xce,xcp);
+      for (l=0; l<lmmax[ia]; ++l)
+         d3db_t_read(fp,&vnl[ia*nfft3d*9 + l*nfft3d],xce,xcp);
 
-      if (Parallel_taskid==0)
+      if (ismaster)
          fclose(fp);
    }
    Parallel_rbcast(0,nkatm,amass);
@@ -618,7 +642,7 @@ main(int argc, char *argv[])
    }
 
    /* writeout  ELCOUT */
-   if (Parallel_taskid==0)
+   if (ismaster)
    {
       fp = fopen("ELCOUT","wb");
       fwrite(&icube,sizeof(int),1,fp);
@@ -631,13 +655,13 @@ main(int argc, char *argv[])
    //fwrite(c1,sizeof(REAL),nn,fp);
    for (i=0; i<(ne[0]+ne[1]); ++i)
       d3db_c_write(fp,&c1[i*n2ft3d],c2,cpsi);
-   if (Parallel_taskid==0)
+   if (ismaster)
       fclose(fp);
 
-   /*  writeout ionic structure */
+   /*  write out ionic structure */
    nn = 3*nion;
    ecopy(&nn,&rzero,&zero,r1,&one);
-   if (Parallel_taskid==0)
+   if (ismaster)
    {
       fp = fopen("IONOUT","w");
       fprintf(fp,"%d\n",nkatm);
@@ -659,9 +683,6 @@ main(int argc, char *argv[])
       }
       fclose(fp);
    }
-
-
-
 
    /* deallocate memory */
    free(rcell);
@@ -705,7 +726,6 @@ main(int argc, char *argv[])
    free(c1);
 
    d3db_end();
-   Parallel_end();
 
    cpu4 = current_second();
 
@@ -727,4 +747,5 @@ main(int argc, char *argv[])
       message(4);
    }
 
+   Parallel_end();
 }

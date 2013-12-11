@@ -25,6 +25,7 @@ extern void d3db_end();
 extern void d3db_init(int, int, int, int);
 extern void d3db_cr_fft3b(REAL*, REAL*, REAL*);
 extern void d3db_rc_fft3f(REAL*, REAL*, REAL*);
+extern void d3db_r_zero_ends(REAL*);
 
 REAL d3db_cc_dot(const REAL*, const REAL*);
 REAL d3db_cc_idot(const REAL*, const REAL*);

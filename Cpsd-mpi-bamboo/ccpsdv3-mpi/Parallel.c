@@ -4,6 +4,7 @@
  *      Author: bylaska
  */
 #include	<stdio.h>
+#include	<stdlib.h>
 #include	"mpi.h"
 #include	"float.h"
 
@@ -50,17 +51,22 @@ REAL Parallel_SumAll(REAL value_in)
 {
    REAL value_out=0.0;
    if (np>1)
+   {
       if (MPI_Allreduce(&value_in,&value_out,1,MPI_REAL_PRECISION,MPI_SUM,MPI_COMM_WORLD)!=MPI_SUCCESS)
          printf("Parallel_SumAll error: MPI_Allreduce failed\n");
+   }
+   else
+	   value_out = value_in;
 
    return value_out;
 }
 
 
-void Parallel_Vector_SumAll(int n, REAL *values_in)
+void Parallel_Vector_SumAll(const int n, REAL *values_inout)
 {
    if (np>1)
-      if (MPI_Allreduce(MPI_IN_PLACE,values_in,n,MPI_REAL_PRECISION,MPI_SUM,MPI_COMM_WORLD)!=MPI_SUCCESS)
+      if (MPI_Allreduce(MPI_IN_PLACE,values_inout,n,MPI_REAL_PRECISION,MPI_SUM,MPI_COMM_WORLD)!=MPI_SUCCESS)
          printf("Parallel_Vector_SumAll error: MPI_Allreduce failed\n");
+
 }
 
