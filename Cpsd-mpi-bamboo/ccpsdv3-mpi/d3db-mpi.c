@@ -97,23 +97,24 @@ static void generate_map_indexes(int taskid, int np, int ny, int nz,
 	int i,j,k,p,q,nq,nq1,nq2,rmdr1;
 	int *indx_proc,*indx_q,*tmp_p;
 
+	nq1   = (ny*nz)/np;
+	rmdr1 = (ny*nz)%np;
+	nq2   = nq1;
+
 	indx_proc = (int *) malloc(ny*nz*sizeof(int));
 	indx_q    = (int *) malloc(ny*nz*sizeof(int));
 	tmp_p     = (int *) malloc(ny*nz*sizeof(int));
-
 	for (i=0; i<(ny*nz); ++i)
 		tmp_p[i] = p_map[i];
-	nq1 = (ny*nz)/np;
-	rmdr1 = (ny*nz)%np;
-	nq2 = nq1;
+
+
+
 	if (rmdr1>0) ++nq2;
-	nq = 0;
-	p = 0;
-	q = 0;
+	nq = 0; p = 0; q = 0;
 	for (i=0; i<(ny*nz); ++i)
 	{
 		indx_proc[i] = p;
-		indx_q[i] = q;
+		indx_q[i]    = q;
 		if (taskid==p) ++nq;
 		++q;
 		if (q>=nq2)
@@ -205,6 +206,7 @@ static void mapping_init()
 	   generate_map_indexes(taskid,np,ny,nz,    p_map1,q_map1,&nq1);
 	   generate_map_indexes(taskid,np,nz,nx/2+1,p_map2,q_map2,&nq2);
 	   generate_map_indexes(taskid,np,nx/2+1,ny,p_map3,q_map3,&nq3);
+
 
 		nfft3d = (nx/2+1)*nq1;
 		if ((ny*nq2)>nfft3d) nfft3d = ny*nq2;
@@ -887,9 +889,9 @@ static void d3db_c_transpose_jk(REAL A[], REAL tmp1[], REAL tmp2[])
 
 
 /***********************************
- *					               *
- *	   d3db_c_transpose_ijk		   *
- *					               *
+ *		                   *
+ *	 d3db_c_transpose_ijk	   *
+ *		                   *
  ***********************************
 
 This routine performs the operation
@@ -926,9 +928,10 @@ static void d3db_c_transpose_ijk(int op, REAL A[], REAL tmp1[], REAL tmp2[])
    }
 
    /* it = 0, transpose data on same thread */
-   msglen = h_i2_start[op][1] - h_i2_start[op][0];
-   for (i=0; i<(2*msglen); ++i)
+   msglen = 2*(h_i2_start[op][1] - h_i2_start[op][0]);
+   for (i=0; i<(msglen); ++i)
       tmp2[2*h_i2_start[op][0]+i] = tmp1[2*h_i1_start[op][0]+i];
+
 
    /* receive packed array data */
    reqcnt = 0;
@@ -937,11 +940,11 @@ static void d3db_c_transpose_ijk(int op, REAL A[], REAL tmp1[], REAL tmp2[])
       /* synchronous receive of tmp */
       proc_from = (taskid-it+np)%np;
       msgtype = 29;
-      msglen = h_i2_start[op][it+1] = h_i2_start[op][it];
+      msglen = 2*(h_i2_start[op][it+1] - h_i2_start[op][it]);
 
       if (msglen>0)
       {
-         if (MPI_Irecv(&tmp2[2*h_i2_start[op][it]],2*msglen,MPI_REAL_PRECISION,
+         if (MPI_Irecv(&tmp2[2*h_i2_start[op][it]],msglen,MPI_REAL_PRECISION,
         		       proc_from,msgtype,
         		       MPI_COMM_WORLD,&request[reqcnt])!=MPI_SUCCESS)
             printf("d3db_c_transpose_ijk error: MPI_Irecv failed\n");
@@ -954,11 +957,11 @@ static void d3db_c_transpose_ijk(int op, REAL A[], REAL tmp1[], REAL tmp2[])
    {
       /* synchronous send of tmp */
          proc_to = (taskid+it)%np;
-         msglen  = h_i1_start[op][it+1] - h_i1_start[op][it];
+         msglen  = 2*(h_i1_start[op][it+1] - h_i1_start[op][it]);
          msgtype = 29;
 
          if (msglen>0)
-            if (MPI_Send(&tmp1[2*h_i1_start[op][it]],2*msglen,MPI_REAL_PRECISION,
+            if (MPI_Send(&tmp1[2*h_i1_start[op][it]],msglen,MPI_REAL_PRECISION,
                          proc_to,msgtype,MPI_COMM_WORLD)!=MPI_SUCCESS)
                printf("d3db_c_transpose_ijk error: MPI_Send failed\n");
    }
@@ -1026,7 +1029,7 @@ static void d3db_t_transpose_ijk(int op, REAL A[], REAL tmp1[], REAL tmp2[])
       /* synchronous receive of tmp */
       proc_from = (taskid-it+np)%np;
       msgtype = 39;
-      msglen = h_i2_start[op][it+1] + h_i2_start[op][it];
+      msglen = h_i2_start[op][it+1] - h_i2_start[op][it];
 
       if (msglen>0)
       {
@@ -1043,7 +1046,7 @@ static void d3db_t_transpose_ijk(int op, REAL A[], REAL tmp1[], REAL tmp2[])
    {
       /* synchronous send of tmp */
       proc_to = (taskid+it)%np;
-      msglen  = h_i1_start[op][1] - h_i1_start[op][0];
+      msglen  = h_i1_start[op][it+1] - h_i1_start[op][it];
       msgtype = 39;
 
       if (msglen>0)
@@ -1889,9 +1892,9 @@ void d3db_c_read(FILE *fp, REAL A[], REAL tmp[], REAL tmp2[])
 
 
 /***********************************
- *					               *
- *	         d3db_t_read  	       *
- *					               *
+ *			           *
+ *	     d3db_t_read  	   *
+ *				   *
  ***********************************
 
 */
@@ -1974,9 +1977,9 @@ void d3db_t_read(FILE *fp, REAL A[], REAL tmp[], REAL tmp2[])
 
 
 /***********************************
- *					               *
- *	         d3db_c_write  	       *
- *					               *
+ * 		                   *
+ *	         d3db_c_write  	   *
+ *				   *
  ***********************************
 
 */
