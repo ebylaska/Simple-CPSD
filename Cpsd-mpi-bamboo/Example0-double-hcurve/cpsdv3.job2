@@ -1,0 +1,22 @@
+#! /bin/csh -f
+
+# dcpsdv3 job:
+#
+
+set job = c2
+set old = 00
+set new = 02
+
+rm -f IONOUT ELCOUT MESSAGE
+cp cpsdv3.d CONTROL
+cp $job.ion$old IONIN
+cp $job.elc$old ELCIN
+
+mpirun -np 2 ../bin/dcpsdv3-mpi.x >& MESSAGE
+
+cp  MESSAGE $job.msg$new
+cp  IONOUT  $job.ion$new
+cp  ELCOUT  $job.elc$new
+
+
+exit
