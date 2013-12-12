@@ -190,18 +190,18 @@ static void mapping_init()
 	   q_map3 = (int *) malloc(ny*(nx/2+1)*sizeof(int));
 	   p_map3 = (int *) malloc(ny*(nx/2+1)*sizeof(int));
 
-           if (mapping2d==1)
-           {
+       if (mapping2d==1)
+       {
 	      hilbert2d_map_c(ny,nz,    p_map1);
 	      hilbert2d_map_c(nz,nx/2+1,p_map2);
 	      hilbert2d_map_c(nx/2+1,ny,p_map3);
-           }
-           else
-           {
-              hcurve_map_c(ny,nz,    p_map1);
+       }
+       else
+       {
+          hcurve_map_c(ny,nz,    p_map1);
 	      hcurve_map_c(nz,nx/2+1,p_map2);
 	      hcurve_map_c(nx/2+1,ny,p_map3);
-           }
+       }
 	   generate_map_indexes(taskid,np,ny,nz,    p_map1,q_map1,&nq1);
 	   generate_map_indexes(taskid,np,nz,nx/2+1,p_map2,q_map2,&nq2);
 	   generate_map_indexes(taskid,np,nx/2+1,ny,p_map3,q_map3,&nq3);
@@ -519,7 +519,7 @@ static void d3db_c_transpose_ijk_init()
          if ((pto==taskid) && (phere==proc_from))
          {
             itmp = j + qto*ny;
-            h_iq_to_i2[0][itmp-1] = index2;
+            h_iq_to_i2[0][itmp] = index2;
             ++index2;
          }
       }
@@ -1879,7 +1879,9 @@ void d3db_c_read(FILE *fp, REAL A[], REAL tmp[], REAL tmp2[])
                    printf("d3db_c_read error: MPI_Recv failed\n");
       	  }
       }
+      printf("zere taskid=%d\n",taskid);
       d3db_c_transpose_ijk(4,A,tmp,tmp2);
+      printf("zerf taskid=%d\n",taskid);
    }
 
 }
