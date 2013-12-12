@@ -1879,9 +1879,7 @@ void d3db_c_read(FILE *fp, REAL A[], REAL tmp[], REAL tmp2[])
                    printf("d3db_c_read error: MPI_Recv failed\n");
       	  }
       }
-      printf("zere taskid=%d\n",taskid);
       d3db_c_transpose_ijk(4,A,tmp,tmp2);
-      printf("zerf taskid=%d\n",taskid);
    }
 
 }

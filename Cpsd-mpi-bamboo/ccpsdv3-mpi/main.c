@@ -162,7 +162,6 @@ main(int argc, char *argv[])
    Parallel_rbcast(0,1,&tolr);
    Parallel_ibcast(0,1,&mapping);
 
-   printf("hera\n");
    /* read in ELCIN header */
    if (ismaster)
    {
@@ -212,7 +211,6 @@ main(int argc, char *argv[])
    if (ismaster)
       fclose(fp);
 
-   printf("herb\n");
    /* define lattice */
    get_cube(icube,unit,&omega,unita,unitg);
 
