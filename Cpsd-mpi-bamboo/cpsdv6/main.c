@@ -169,7 +169,7 @@ main()
    fclose(fp);
 
    /* read in wavefunctions */
-
+// ok
 
    /*  read ionic structure */
    fp = fopen("IONIN","r");
